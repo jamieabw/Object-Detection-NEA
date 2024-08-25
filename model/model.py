@@ -9,6 +9,9 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
+"""
+TODO: sort out the output labels, make a few conversion files, test the model on a few bits of data then start training
+"""
 
 # Define the architecture parameters
 KERNELS = [64, 192, 128, 256, 256, 512, 256, 512, 256, 512, 256, 512, 256, 512, 512, 1024, 512, 1024, 512, 1024, 1024, 1024]
