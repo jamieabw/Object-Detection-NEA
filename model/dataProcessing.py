@@ -1,3 +1,4 @@
+import os
 # for not crowdhuman the other one the format is: class, x, y, w, h but the bbox values are already normalised
 import tensorflow as tf
 import numpy as np
@@ -8,10 +9,10 @@ def encodeLabels(textFileDir, S, B, C):
     with open(textFileDir, "r") as t:
         for line in t.readlines():
             properties = line.split(" ")
-            print(properties)
+            #print(properties)
             cell = [int(float(properties[1]) // cellSize), int(float(properties[2]) // cellSize)]
-            print(cell)
-            print((float(properties[1])  % cellSize) / cellSize)
+            #print(cell)
+            #print((float(properties[1])  % cellSize) / cellSize)
             label[cell[0], cell[1],0] = 1
             label[cell[0], cell[1],1] = (float(properties[1])  % cellSize) / cellSize
             label[cell[0], cell[1],2] = (float(properties[2])  % cellSize) / cellSize
@@ -20,7 +21,7 @@ def encodeLabels(textFileDir, S, B, C):
             label[cell[0], cell[1],5] = 1
         return label
     
-
+# TODO: this is chatGPT, change this to ur own code when u have time
 def jpg_to_resized_array(image_path, size=(448, 448)):
     """
     Resize a JPG image to the specified size and convert it to a NumPy array with dimensions (width, height, channels).
@@ -45,13 +46,28 @@ def jpg_to_resized_array(image_path, size=(448, 448)):
     img_array = np.transpose(img_array, (1, 0, 2))
     
     return img_array
+
+
+def preprocessData(folderDir):
+    images =[] #np.array([])
+    labels =[] #np.array([])
+    for file in os.listdir(folderDir):
+        if "txt" in file:
+            labels.append(encodeLabels(f"{folderDir}\\{file}", 8,1,1))
+            #np.append(labels, encodeLabels(f"{folderDir}\\{file}", 8,1,1))
+        else:
+            images.append(jpg_to_resized_array(f"{folderDir}\\{file}"))
+            #np.append(images, jpg_to_resized_array(f"{folderDir}\\{file}")
+    images = np.array(images)
+    labels = np.array(labels)
+
+    print(images.shape)
+    print(labels.shape)
+    images = images.astype("float32") / 255.0
+    return images, labels
+
             
 
-
-dir = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\src\\model\\testdata\\crop_000003_jpg.rf.df647b1de3032ae2eff2f38159b2be1c.txt"
-imgDir = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\src\\model\\testdata\\crop_000003_jpg.rf.df647b1de3032ae2eff2f38159b2be1c.jpg"
-a = encodeLabels(dir, 8, 1, 1)
-print(jpg_to_resized_array(imgDir).shape)
-print(a.shape)
-print(a[4,3])
+directory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\train"
+preprocessData(directory)
 # size divided by cell size = bbox size relative to cells
