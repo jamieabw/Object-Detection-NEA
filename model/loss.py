@@ -3,21 +3,22 @@ import tensorflow as tf
 
 LAMBDA_NOOBJ = 0.5
 LAMBDA_COORD = 2
-S = 9
+S = 8
 B = 1
 C = 1
 """
-each grid cell tensor contains:
-C, x1, y1, w1, h1, P(c1)
+#each grid cell tensor contains:
+#C, x1, y1, w1, h1, P(c1)
 """
 
 
 def yoloLoss(yTrue, yPred):
-    boundingBoxLoss = boundingBoxLoss(yPred, yTrue)
-    confidenceLoss = confidenceLoss(yPred, yTrue)
-    classLoss = classLoss(yPred, yTrue)
-
-    return boundingBoxLoss + confidenceLoss + classLoss
+    bboxLoss = boundingBoxLoss(yPred, yTrue)
+    confLoss = confidenceLoss(yPred, yTrue)
+    clsLoss = classLoss(yPred, yTrue)
+    
+    totalLoss = bboxLoss + confLoss + clsLoss
+    return totalLoss
 
 def boundingBoxLoss(yPred, yTrue):
     trueConfidence = yTrue[..., 0:1]
@@ -34,7 +35,7 @@ def boundingBoxLoss(yPred, yTrue):
     # soon for both of the losses here you can multiply them by the true confidence, for each grid cell (either 0 or 1)
  
     coordLoss = LAMBDA_COORD * tf.reduce_sum(objectMask * tf.square(trueX - predictedX) + tf.square(trueY - predictedY))
-    sizeLoss = LAMBDA_COORD * tf.reduce_sum(objectMask * tf.square(tf.sqrt(trueW) - tf.sqrt(predictedW)) + tf.square(tf.sqrt(trueH) - tf.sqrt(predictedH)))
+    sizeLoss = LAMBDA_COORD * tf.reduce_sum(objectMask * tf.square(tf.sqrt(trueW) - tf.sqrt(tf.abs(predictedW))) + tf.square(tf.sqrt(trueH) - tf.sqrt(tf.abs(predictedH))))
     return coordLoss + sizeLoss
 
 def confidenceLoss(yPred, yTrue):
@@ -51,4 +52,5 @@ def classLoss(yPred, yTrue):
     predictedClasses = yPred[..., 5:]
     trueClasses = yTrue[..., 5:]
     return tf.reduce_sum(objectMask * tf.square(trueClasses - predictedClasses))
+
 
