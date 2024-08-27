@@ -25,8 +25,8 @@ def boundingBoxLoss(yPred, yTrue):
     objectMask = tf.cast(trueConfidence > 0, tf.float32)
     predictedX = yPred[..., 1:2]
     predictedY = yPred[..., 2:3]
-    predictedW = yPred[..., 3:4]
-    predictedH = yPred[..., 4:5]
+    predictedW =yPred[..., 3:4] #tf.nn.relu(yPred[..., 3:4])
+    predictedH =yPred[..., 4:5] #tf.nn.relu(yPred[..., 4:5])
 
     trueX = yTrue[..., 1:2]
     trueY = yTrue[..., 2:3]
