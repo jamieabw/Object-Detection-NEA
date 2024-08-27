@@ -3,6 +3,7 @@ from keras import layers
 from CNNblocks import CNNBlock
 import numpy as np
 from loss import yoloLoss
+from predictionHandler import findBoxes
 from dataProcessing import encodeLabels, jpg_to_resized_array, preprocessData
 # DEBUGGING
 from PLEASEJUSTWORK import results
@@ -11,9 +12,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-"""
-TODO: FIX THE FUCKING LOSS FUNCTION ITS INCREASING NOT DECREASING WHY IS THIS SUCH A PAIN IN MY FUCKING ASS
-"""
+
 
 # Define the architecture parameters
 KERNELS = [64, 192, 128, 256, 256, 512, 256, 512, 256, 512, 256, 512, 256, 512, 512, 1024, 512, 1024, 512, 1024, 1024, 1024]
@@ -52,14 +51,8 @@ class YoloV1(tf.keras.Model):
 model = YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 # Summary of the model
-"""
-When using a custom loss function in Keras with model.compile, you typically need to pass a function that takes two arguments: yTrue and yPred.
- Keras will automatically pass the true labels and predicted values to this loss function during training.
- In your case, your yoloLoss function is already designed to take these arguments, so you don't need to modify it further."""
-
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.000001), loss=yoloLoss, metrics=["accuracy"])
 model.summary()
-model.fit(x_train, y_train, epochs=12, verbose=1, batch_size=8)
+model.fit(x_train, y_train, epochs=12, verbose=1, batch_size=10)
 debuggerx, debuggery = preprocessData("C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\src\model\\testdata")
-for i in range(100):
-    results(model.predict(debuggerx))
+findBoxes(model.predict(debuggerx))
