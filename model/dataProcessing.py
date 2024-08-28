@@ -32,9 +32,35 @@ def convertToImage(image):
     return Image.fromarray(np.transpose(image, (1,0,2)))
 
 
-def preprocessData(folderDir):
+def preprocessData(folderDir, testData=False):
     images =[] #np.array([])
     labels =[] #np.array([])
+    counter = 0
+    for file in os.listdir(folderDir):
+        if "txt" in file:
+            labels.append(encodeLabels(f"{folderDir}\\{file}", 8,1,1))
+            #np.append(labels, encodeLabels(f"{folderDir}\\{file}", 8,1,1))
+        else:
+            if testData:
+                convertToArray(images.append(f"{folderDir}\\{file}"))
+            else:    
+                images.append(f"{folderDir}\\{file}")
+            #np.append(images, jpg_to_resized_array(f"{folderDir}\\{file}")
+        counter +=1 
+    images = np.array(images)
+    labels = np.array(labels)
+
+    print(images.shape)
+    print(labels.shape)
+    if testData:
+        images = images.astype("float32") / 255.0
+    return images, labels
+
+"""def preprocessData(folderDir):
+    images =[] #np.array([])
+    labels =[] #np.array([])
+    print("hrehehrererherer")
+    print(folderDir)
     counter = 0
     for file in os.listdir(folderDir):
         if counter == 2000: break
@@ -51,10 +77,5 @@ def preprocessData(folderDir):
     print(images.shape)
     print(labels.shape)
     images = images.astype("float32") / 255.0
-    return images, labels
-
-            
-
-directory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\train"
-preprocessData(directory)
+    return images, labels"""
 # size divided by cell size = bbox size relative to cells
