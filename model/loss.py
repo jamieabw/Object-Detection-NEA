@@ -1,6 +1,52 @@
 import tensorflow as tf
+def yoloLoss(yTrue, yPred):
+    confidenceLoss = ConfidenceLoss(yTrue, yPred)
+    coordLoss = boundingBoxLoss(yTrue, yPred)
+    classLoss = ClassLoss(yTrue, yPred)
+    totalLoss = (5 * coordLoss) + (2 * confidenceLoss) + (1 * classLoss)
+    return totalLoss
 
-EPSILON =   1e-9
+def ConfidenceLoss(yTrue, yPred):
+    existsObject = tf.expand_dims(yTrue[..., 0], -1)
+    confidenceLoss = tf.reduce_sum(tf.square(existsObject * (yTrue[..., 0:1] - yPred[..., 0:1])))
+    confidenceLoss += 0.5 * tf.reduce_sum(tf.square((1 - existsObject) * (yTrue[..., 0:1] - yPred[..., 0:1])))
+    tf.debugging.assert_all_finite(confidenceLoss, 'NaNs or Infs found in c')
+    
+    # Add epsilon to avoid division by zero
+    non_zero_count = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32)
+    return confidenceLoss / (non_zero_count)
+
+def ClassLoss(yTrue, yPred):
+    existsObject = tf.expand_dims(yTrue[..., 0], -1)
+    classLoss = tf.reduce_sum(tf.square(existsObject * (yTrue[..., 5:] - yPred[..., 5:])))
+    
+    # Add epsilon to avoid division by zero
+    non_zero_count = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32)
+    return classLoss / (non_zero_count)
+
+def boundingBoxLoss(yTrue, yPred):
+    existsObject = tf.expand_dims(yTrue[..., 0], -1)
+    
+    xyPred = existsObject * yPred[..., 1:3]
+    xyTrue = existsObject * yTrue[..., 1:3]
+    tf.debugging.assert_all_finite(xyTrue, 'NaNs or Infs found in XYT')
+    
+    # Ensure non-negative width and height before square root
+    whPred = existsObject * tf.math.sign(yPred[..., 3:5]) * tf.sqrt(tf.math.abs(yPred[..., 3:5]))
+    #whPred = existsObject * tf.sqrt(tf.maximum(yPred[..., 3:5], 0.0))
+    whTrue = existsObject * tf.sqrt(yTrue[..., 3:5])
+    tf.debugging.assert_all_finite(whTrue, 'NaNs or Infs found in whT')
+    
+    xyLoss = tf.reduce_sum(tf.square(xyPred - xyTrue))
+    whLoss = tf.reduce_sum(tf.square(whPred - whTrue))
+    tf.debugging.assert_all_finite(whLoss, 'NaNs or Infs found in wh')
+    tf.debugging.assert_all_finite(xyLoss, f'NaNs or Infs found in xy {xyLoss}')
+    tf.debugging.assert_all_finite(xyLoss, 'NaNs or Infs found in xy')
+    
+    # Add epsilon to avoid division by zero
+    non_zero_count = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32)
+    return 2 * (xyLoss + whLoss) / (non_zero_count)
+"""EPSILON =   1e-9
 LAMBDA_NOOBJ = 0.5
 LAMBDA_COORD = 5
 S = 8
@@ -20,23 +66,14 @@ def yoloLoss(yTrue, yPred):
     totalLoss = bboxLoss + confLoss + clsLoss
     return totalLoss
 
-def boundingBoxLoss(yPred, yTrue):
-    trueConfidence = yTrue[..., 0:1]
-    objectMask = tf.cast(trueConfidence > 0, tf.float32)
-    predictedX = yPred[..., 1:2]
-    predictedY = yPred[..., 2:3]
-    predictedW = yPred[..., 3:4]
-    predictedH = yPred[..., 4:5]
+def boundingBoxLoss(yTrue, yPred):
+    existsObject = tf.expand_dims(yTrue[..., 0], -1)
+    xyPred = existsObject * yPred[..., 1:3]
+    xyTrue = existsObject * yTrue[..., 1:3]
+    whPred = existsObject * tf.math.sign(yPred[..., 3:5]) * tf.sqrt(tf.math.abs(yPred[..., 3:5]))
+    whTrue = existsObject * yTrue[..., 3:5]
+    return 2 * (tf.reduce_sum(tf.math.square(whPred - whTrue)) + tf.reduce_sum(tf.math.square(xyPred - xyTrue))) / (tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32))
 
-    trueX = yTrue[..., 1:2]
-    trueY = yTrue[..., 2:3]
-    trueW = yTrue[..., 3:4]
-    trueH = yTrue[..., 4:5]
-
-    coordLoss = LAMBDA_COORD * tf.reduce_sum(objectMask * (tf.square(trueX - predictedX) + tf.square(trueY - predictedY)))
-    sizeLoss = LAMBDA_COORD * tf.reduce_sum(objectMask * (tf.square(trueW - predictedW) + tf.square(trueH - predictedH)))
-    
-    return coordLoss + sizeLoss
 
 def confidenceLoss(yPred, yTrue):
     predictedConfidence = yPred[..., 0:1]
@@ -51,11 +88,12 @@ def classLoss(yPred, yTrue):
     objectMask = tf.cast(trueConfidence > 0, tf.float32)
     predictedClasses = yPred[..., 5:]
     trueClasses = yTrue[..., 5:]
-    return tf.reduce_sum(objectMask * tf.square(trueClasses - predictedClasses))
+    return tf.reduce_sum(objectMask * tf.square(trueClasses - predictedClasses))"""
+"""
 
 
 
-"""import tensorflow as tf
+import tensorflow as tf
 
 # Constants
 LAMBDA_NOOBJ = 0.5
