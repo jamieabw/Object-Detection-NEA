@@ -1,7 +1,8 @@
 import cv2
 from PIL import Image
 import numpy as np
-def yieldNextFrame(source=0, videoDir=None):
+# NOTE: laptop requires source=0 desktop source=1
+def yieldNextFrame(source=1, videoDir=None):
     if videoDir == None:
         capture = cv2.VideoCapture(source)
     else:
@@ -20,3 +21,6 @@ def yieldNextFrame(source=0, videoDir=None):
 
 def convertToImage(frame):
     return Image.fromarray(frame)
+
+def readImage(imagePath):
+    return Image.open(imagePath)
