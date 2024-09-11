@@ -78,8 +78,8 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
 from videoHandler import yieldNextFrame, readImage
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
+WINDOW_WIDTH = 1000
+WINDOW_HEIGHT = 800
 
 class GUI(tk.Tk):
     def __init__(self):

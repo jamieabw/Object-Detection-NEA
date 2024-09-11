@@ -14,21 +14,21 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # TODO: THE LOSS FUNCTION IS FUCKED I BELIEVE, WHICH IS CAUSING THE OVERFITTING SO TRY FIX THAT, ALSO ADD THE DROPOUT AND EXTRA THINGS MENTIONED 
 # IN THE YOLO PAPER TO ASSIST WITH TRAINING AS MAYBE THAT IS THE PROBLEM!!!!!
 
-checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=f'./modelsaves\\weights.h5', save_weights_only=True, save_freq="epoch", verbose=1)
+checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=f'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\modelsaves', save_weights_only=True, save_freq="epoch", verbose=1)
 
 # Define the architecture parameters
 KERNELS = [64, 192, 128, 256, 256, 512, 256, 512, 256, 512, 256, 512, 256, 512, 512, 1024, 512, 1024, 512, 1024, 1024, 1024]
 SIZES = [7, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 3, 3]
 STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
-GRID_SIZE = 8
-CLASSES = 1 # training only on crowdhuman initially
+GRID_SIZE = 10
+CLASSES = 20 # training only on crowdhuman initially
 BBOXES = 1
 startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(1e-3)
-trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\knives\\train"
+trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
 validationDirectory = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\first validation session set"
-testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\knives\\train"
-"C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\drones\\train"
+testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\val2017\\val2017"
+"C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\knives\\test"
 
 #TODO: CLEAN THIS CODE UP ITS A MESS BUT DONT BREAK ANYTHING, IMPLEMENT NMS AND THEN ALSO TEST IT ON A UNSEEN IMAGE
@@ -88,12 +88,12 @@ model.summary()
 print(y_train.shape)
 print(y_test.shape)
 # Load the weights
-model.load_weights('./modelsaves/weights.h5')
+#model.load_weights('./modelsaves/weights.h5')
 
 
-#model.fit(data_generator(x_train, y_train, 8), epochs=4, verbose=1, steps_per_epoch=len(y_train) / 8, callbacks=[checkpoint])#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)
-"""lossTestData = convertToArray(x_test[0]).astype("float32") / 255.0
-lossTestTrue = y_test[0].reshape((1,8,8,6))
+model.fit(data_generator(x_train, y_train, 8), epochs=12, verbose=1, steps_per_epoch=len(y_train) / 8, callbacks=[checkpoint])#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)
+"""lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
+lossTestTrue = y_test[1].reshape((1,8,8,25))
 print(lossTestData.shape)
 while True:
     model.fit(np.reshape(lossTestData, (1,448,448,3)), lossTestTrue, verbose=1, epochs=220)
