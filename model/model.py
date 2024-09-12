@@ -23,7 +23,7 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 10
 CLASSES = 20 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([8], [0.001, 0.0001])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([24], [0.001, 0.0001])
 startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(0.0005)
 trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
@@ -91,7 +91,7 @@ print(y_test.shape)
 #model.load_weights('C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\modelsaves\\weights - Copy.h5')
 
 
-model.fit(data_generator(x_train, y_train, 8), epochs=14, verbose=1, steps_per_epoch=len(y_train) / 8, callbacks=[checkpoint])#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)
+model.fit(data_generator(x_train, y_train, 16), epochs=40, verbose=1, steps_per_epoch=len(y_train) / 16, callbacks=[checkpoint])#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))
 print(lossTestData.shape)
