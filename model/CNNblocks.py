@@ -2,12 +2,10 @@
 import tensorflow as tf
 import keras
 from keras import layers
-
 POOLING_POSITIONS = [1, 5, 15]
-l2_regularizer = tf.keras.regularizers.l2(1e-3)
 
 class CNNBlock(layers.Layer):
-    def __init__(self, kernels, sizes, strides):
+    def __init__(self, kernels, sizes, strides, l2_regularizer):
         super(CNNBlock, self).__init__()
         self.convLayers = [layers.Conv2D(k, a, s, activation="leaky_relu", padding="same", kernel_regularizer=l2_regularizer) for k, a, s in zip(kernels, sizes, strides)]
         self.poolingLayers = [layers.MaxPooling2D(2, 2, padding="same") for i in range(4)]

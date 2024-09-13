@@ -14,18 +14,23 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 # TODO: THE LOSS FUNCTION IS FUCKED I BELIEVE, WHICH IS CAUSING THE OVERFITTING SO TRY FIX THAT, ALSO ADD THE DROPOUT AND EXTRA THINGS MENTIONED 
 # IN THE YOLO PAPER TO ASSIST WITH TRAINING AS MAYBE THAT IS THE PROBLEM!!!!!
 
-checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=f'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\modelsaves', save_weights_only=True, save_freq="epoch", verbose=1)
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    filepath='C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_{epoch:02d}.h5',  # Use the built-in epoch variable
+    save_weights_only=True,
+    save_freq="epoch",
+    verbose=1
+)
 
 # Define the architecture parameters
 KERNELS = [64, 192, 128, 256, 256, 512, 256, 512, 256, 512, 256, 512, 256, 512, 512, 1024, 512, 1024, 512, 1024, 1024, 1024]
 SIZES = [7, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 3, 3]
 STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
-GRID_SIZE = 10
+GRID_SIZE = 7
 CLASSES = 20 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([24], [0.001, 0.0001])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([24], [0.0005, 0.00005])
 startVal = 0
-l2_regularizer = tf.keras.regularizers.l2(0.0005)
+l2_regularizer = tf.keras.regularizers.l2(0.00025)
 trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
 validationDirectory = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\first validation session set"
 testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\val2017\\val2017"
@@ -67,7 +72,7 @@ class YoloV1(tf.keras.Model):
         
         self.classes = classes
         self.bboxes = bboxes
-        self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES)
+        self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES, l2_regularizer)
         self.denseLayer = layers.Dense(4096, kernel_regularizer=l2_regularizer)
         self.outputDense = layers.Dense(self.grid_size * self.grid_size * ((5 * self.bboxes) + self.classes), kernel_regularizer=l2_regularizer) # adding a relu activation to this breaks the loss i think - dunno why
 
@@ -75,7 +80,7 @@ class YoloV1(tf.keras.Model):
         x = self.convLayers(inputs)
         x = layers.Flatten()(x)
         x = self.denseLayer(x)
-        x = layers.Dropout(rate=0.5)(x)
+        #x = layers.Dropout(rate=0.25)(x)
         x = self.outputDense(x)
         x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
         return x    
@@ -91,7 +96,7 @@ print(y_test.shape)
 #model.load_weights('C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\modelsaves\\weights - Copy.h5')
 
 
-model.fit(data_generator(x_train, y_train, 16), epochs=40, verbose=1, steps_per_epoch=len(y_train) / 16, callbacks=[checkpoint])#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)
+model.fit(data_generator(x_train, y_train, 10), epochs=40, verbose=1, steps_per_epoch=len(y_train) / 10, callbacks=[checkpoint])#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))
 print(lossTestData.shape)

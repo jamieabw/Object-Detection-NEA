@@ -13,8 +13,8 @@ def findBoxes(input, output):
     bboxes = []
     output = output[0]
     image = convertToImage(input)
-    for j in range(8):
-        for i in range(8):
+    for j in range(7):
+        for i in range(7):
             if output[i, j, 0] < 0.15 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
                 if output[i,j,0] != 0: print(output[i,j,0])
                 continue
