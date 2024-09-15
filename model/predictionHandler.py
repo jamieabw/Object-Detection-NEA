@@ -7,9 +7,10 @@ from math import sqrt
 cellSize = 448 / 8
 testDir = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset - CROWDHUMAN\\CrowdHuman_train01\\Images\\273271,1ba93000e00e011c.jpg"
 classes = list(range(20))
-classesNames = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", 
+classesNames = ["Person"]
+"""classesNames = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", 
            "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", 
-           "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
+           "pottedplant", "sheep", "sofa", "train", "tvmonitor"]"""
 
 def findBoxes(input, output):
     w,h,x,y = (0,0,0,0)
@@ -18,7 +19,7 @@ def findBoxes(input, output):
     image = convertToImage(input)
     for j in range(7):
         for i in range(7):
-            if output[i, j, 0] < 0.6 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
+            if output[i, j, 0] <= 0.5 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
                 if output[i,j,0] != 0: print(output[i,j,0])
                 continue
 

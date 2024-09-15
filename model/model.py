@@ -28,12 +28,12 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 7
 CLASSES = 1 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([3, 10], [0.0001, 0.00001, 0.000001])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([8, 12], [0.001, 0.0001, 0.00001])
 startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(0.0005)
 trainingDirectory = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\training data set"
 validationDirectory = 'C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\dataset - CROWDHUMAN\\CrowdHuman_val\\Images'
-testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
+testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\knives\\test"
 
@@ -181,11 +181,11 @@ model.summary()
 print(y_train.shape)
 print(y_test.shape)
 # Load the weights
-model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_17.h5")
+model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_12.h5")
 
 
-model.fit(data_generator(x_train, y_train,18), epochs=30, verbose=1, steps_per_epoch=len(y_train) /18, callbacks=[checkpoint],
-           validation_data=data_generator(x_valid, y_valid, 18), validation_steps=len(y_valid) / 18)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
+"""model.fit(data_generator(x_train, y_train,18), epochs=21, verbose=1, steps_per_epoch=len(y_train) /18, callbacks=[checkpoint],
+           validation_data=data_generator(x_valid, y_valid, 18), validation_steps=len(y_valid) / 18)"""#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))
 print(lossTestData.shape)
@@ -200,6 +200,7 @@ while True:
     print("\n\n\n\n")
     print(lossTestTrue)"""
 for data in x_test:
+    print(data.shape)
     data = convertToArray(data).astype("float32") / 255.0
     print(data.shape)
     data2 = np.reshape(data, (1,448,448,3))

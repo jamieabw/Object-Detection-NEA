@@ -40,8 +40,6 @@ def encodeLabels(textFileDir, S, B, C):
             
             # Extract bounding box and class info
             class_id = int(properties[0])  # Class label
-            if class_id == 14:
-                continue
             bbox_x = float(properties[1])  # X center
             bbox_y = float(properties[2])  # Y center
             bbox_w = float(properties[3])  # Width
@@ -85,7 +83,7 @@ def encodeLabels(textFileDir, S, B, C):
 
 def convertToArray(imagePath, size=(448,448)):
     image = Image.open(imagePath)
-    return np.transpose(np.array(image.resize(size)), (1,0,2)) # np.array turns the image into an array of [h,w,c] it needs to be [w,h,c]
+    return np.transpose(np.array(image.resize(size)), (1,0,2))[:, :, :3] # np.array turns the image into an array of [h,w,c] it needs to be [w,h,c]
 
 def convertToImage(image):
     image *= 255
