@@ -1,8 +1,8 @@
 import os
 import xml.etree.ElementTree as ET
 
-INPUT_DIR = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\Annotations" 
-OUTPUT_DIR = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\YOLOLabels"
+INPUT_DIR = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\PASCAL VOC\\valid\\VOCdevkit\\VOC2007\\Annotations" 
+OUTPUT_DIR = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\PASCAL VOC\\valid\\VOCdevkit\\VOC2007\\JPEGImages"
 
 # Class list in the same order as PASCAL VOC
 classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", 

@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 from random import shuffle
 from PIL import Image
+from math import floor
 """def encodeLabels(textFileDir, S, B, C):
     label = np.zeros(shape=[S,S,B * (C + 5)])
     cellSize = 1 / S
@@ -28,7 +29,7 @@ from PIL import Image
 
 def encodeLabels(textFileDir, S, B, C):
     # Create label array: [S, S, B * (5 + C)]
-    label = np.zeros(shape=[S, S, B * (5 + C)])
+    label = np.zeros(shape=[S, S, (B * 5) + C])
     cellSize = 1 / S
     
     with open(textFileDir, "r") as t:
@@ -39,14 +40,18 @@ def encodeLabels(textFileDir, S, B, C):
             
             # Extract bounding box and class info
             class_id = int(properties[0])  # Class label
+            if class_id == 14:
+                continue
             bbox_x = float(properties[1])  # X center
             bbox_y = float(properties[2])  # Y center
             bbox_w = float(properties[3])  # Width
             bbox_h = float(properties[4])  # Height
             
             # Determine which cell the bounding box belongs to
-            cell_x = int(bbox_x // cellSize)  # Cell row index
-            cell_y = int(bbox_y // cellSize)  # Cell column index
+            cell_x = floor(bbox_x // cellSize)  # Cell row index
+            cell_y = floor(bbox_y // cellSize)  # Cell column index
+            if bbox_x > 1 or bbox_y > 1:
+                continue
             
             # Calculate bounding box relative to the cell
             relative_x = (bbox_x % cellSize) / cellSize
@@ -59,6 +64,7 @@ def encodeLabels(textFileDir, S, B, C):
                 box_start = b * (5 + C)  # Start index for this box in the label array
                 
                 # If the confidence is 0 (no bounding box assigned yet), assign this box
+                #print(cell_x, cell_y, bbox_y)
                 if label[cell_x, cell_y, box_start] == 0:
                     # Assign the confidence (objectness)
                     label[cell_x, cell_y, box_start] = 1
