@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tensorflow as tf
 from math import sqrt
-cellSize = 448 / 8
+cellSize = 448 / 7
 testDir = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset - CROWDHUMAN\\CrowdHuman_train01\\Images\\273271,1ba93000e00e011c.jpg"
 classes = list(range(20))
 classesNames = ["Person"]
@@ -19,7 +19,7 @@ def findBoxes(input, output):
     image = convertToImage(input)
     for j in range(7):
         for i in range(7):
-            if output[i, j, 0] <= 0.5 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
+            if output[i, j, 0] <= 0.345 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
                 if output[i,j,0] != 0: print(output[i,j,0])
                 continue
 

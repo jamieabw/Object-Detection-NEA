@@ -33,7 +33,7 @@ startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(0.0005)
 trainingDirectory = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\training data set"
 validationDirectory = 'C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\dataset - CROWDHUMAN\\CrowdHuman_val\\Images'
-testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
+testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\first test set"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\knives\\test"
 
@@ -181,7 +181,9 @@ model.summary()
 print(y_train.shape)
 print(y_test.shape)
 # Load the weights
-model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_12.h5")
+model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\humans 2loss S=7 B=1 C=1 BETTER.h5")
+#model.save("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5")
+
 
 
 """model.fit(data_generator(x_train, y_train,18), epochs=21, verbose=1, steps_per_epoch=len(y_train) /18, callbacks=[checkpoint],
