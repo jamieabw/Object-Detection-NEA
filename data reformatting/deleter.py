@@ -28,6 +28,6 @@ def clean_dataset(images_folder, labels_folder, image_extensions=['.jpg', '.jpeg
             print(f"Deleted label without image: {label_path}")
 
 # Usage
-images_folder = 'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\training data set'
-labels_folder = 'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\training data set'
+images_folder = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
+labels_folder = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
 clean_dataset(images_folder, labels_folder)

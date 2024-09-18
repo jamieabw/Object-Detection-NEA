@@ -5,6 +5,7 @@ from loss import yoloLoss, boundingBoxLoss, ClassLoss, ConfidenceLoss
 from predictionHandler import findBoxes
 from dataProcessing import preprocessData, convertToArray
 import numpy as np
+import random
 # DEBUGGING
 physical_devices = tf.config.list_physical_devices("GPU")
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -28,12 +29,12 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 7
 CLASSES = 1 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([8, 12], [0.001, 0.0001, 0.00001])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([10, 22], [0.001, 0.0005, 0.0001])
 startVal = 0
-l2_regularizer = tf.keras.regularizers.l2(0.0005)
-trainingDirectory = "C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\training data set"
-validationDirectory = 'C:\\Users\\jamie\Documents\\CS NEA 24 25 source code\\datasets\\dataset - CROWDHUMAN\\CrowdHuman_val\\Images'
-testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\first test set"
+l2_regularizer = tf.keras.regularizers.l2(0)
+trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
+validationDirectory = 'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\PASCAL VOC\\valid\\VOCdevkit\\VOC2007\\JPEGImages'
+testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\knives\\test"
 
@@ -46,20 +47,28 @@ x_test, y_test =preprocessData(testDirectory, GRID_SIZE, BBOXES, CLASSES, True)
 
 def data_generator(imagePaths, labels, batchSize):
     startVal = 0
-    counter = 0
+
+    # Convert imagePaths and labels to lists to allow shuffling
+    imagePaths = list(imagePaths)
+    labels = list(labels)
 
     while True:
+        if startVal == 0:  # Shuffle at the start of each epoch
+            combined = list(zip(imagePaths, labels))
+            random.shuffle(combined)
+            imagePaths, labels = zip(*combined)
+
         endVal = min(startVal + batchSize, len(labels))
         batchInput = []
         batchOutput = []
         for i in range(startVal, endVal):
             batchInput.append(convertToArray(imagePaths[i]))
-            #print(imagePaths[i])
             batchOutput.append(labels[i])
+        
         startVal += batchSize
         if startVal >= len(labels):
             startVal = 0
-        counter += 1
+        
         yield (np.array(batchInput).astype("float32") / 255.0, np.array(batchOutput))
 
 
@@ -91,80 +100,81 @@ def testModel(input_shape=(448, 448, 3), num_classes=20, num_boxes=2):
     inputs = layers.Input(shape=input_shape)
 
     # Convolutional Layers
-    x = layers.Conv2D(64, (7, 7), strides=(2, 2), padding='same')(inputs)
+    x = layers.Conv2D(64, (7, 7), strides=(2, 2), padding='same', kernel_regularizer=l2_regularizer)(inputs)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
     x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
-    x = layers.Conv2D(192, (3, 3), padding='same')(x)
+    x = layers.Conv2D(192, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
     x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
-    x = layers.Conv2D(128, (1, 1), padding='same')(x)
+    x = layers.Conv2D(128, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(256, (3, 3), padding='same')(x)
+    x = layers.Conv2D(256, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(256, (1, 1), padding='same')(x)
+    x = layers.Conv2D(256, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(512, (3, 3), padding='same')(x)
+    x = layers.Conv2D(512, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
     x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
     for _ in range(4):
-        x = layers.Conv2D(256, (1, 1), padding='same')(x)
+        x = layers.Conv2D(256, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU(alpha=0.1)(x)
         
-        x = layers.Conv2D(512, (3, 3), padding='same')(x)
+        x = layers.Conv2D(512, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(512, (1, 1), padding='same')(x)
+    x = layers.Conv2D(512, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(1024, (3, 3), padding='same')(x)
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
     x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
 
     for _ in range(2):
-        x = layers.Conv2D(512, (1, 1), padding='same')(x)
+        x = layers.Conv2D(512, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU(alpha=0.1)(x)
         
-        x = layers.Conv2D(1024, (3, 3), padding='same')(x)
+        x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
         x = layers.BatchNormalization()(x)
         x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(1024, (3, 3), padding='same')(x)
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(1024, (3, 3), strides=(2, 2), padding='same')(x)
+    x = layers.Conv2D(1024, (3, 3), strides=(2, 2), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(1024, (3, 3), padding='same')(x)
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
-    x = layers.Conv2D(1024, (3, 3), padding='same')(x)
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
     x = layers.BatchNormalization()(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
 
     # Fully Connected Layers
     x = layers.Flatten()(x)
-    x = layers.Dense(4096)(x)
+    x = layers.Dense(4096, kernel_regularizer=l2_regularizer)(x)
     x = layers.LeakyReLU(alpha=0.1)(x)
+    x = layers.Dropout(0.05)(x)
     x = layers.Dense(7 * 7 * (num_classes + (num_boxes * 5)))(x) # S x S x (B * 5 + C)
     x = layers.Reshape((GRID_SIZE, GRID_SIZE, (BBOXES * 5) + CLASSES))(x)
     
@@ -176,18 +186,18 @@ def testModel(input_shape=(448, 448, 3), num_classes=20, num_boxes=2):
 model = testModel(num_classes=1, num_boxes=1)#YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 
-model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.3), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
 model.summary()
 print(y_train.shape)
 print(y_test.shape)
 # Load the weights
-model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\humans 2loss S=7 B=1 C=1 BETTER.h5")
-#model.save("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5")
+model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_06.h5")
+#model.save("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v2.h5") 
 
 
 
-"""model.fit(data_generator(x_train, y_train,18), epochs=21, verbose=1, steps_per_epoch=len(y_train) /18, callbacks=[checkpoint],
-           validation_data=data_generator(x_valid, y_valid, 18), validation_steps=len(y_valid) / 18)"""#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
+model.fit(data_generator(x_train, y_train,12), epochs=30, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
+           validation_data=data_generator(x_valid, y_valid, 12), validation_steps=len(y_valid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))
 print(lossTestData.shape)

@@ -19,7 +19,7 @@ def findBoxes(input, output):
     image = convertToImage(input)
     for j in range(7):
         for i in range(7):
-            if output[i, j, 0] <= 0.345 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
+            if output[i, j, 0] <= 0.24 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
                 if output[i,j,0] != 0: print(output[i,j,0])
                 continue
 
@@ -31,7 +31,7 @@ def findBoxes(input, output):
             class_id = tf.argmax(class_probs)
             c = classes[class_id]
 
-
+            print("DETECTION!")
             bboxes.append([x,y,w,h,c])
 
     fig, ax = plt.subplots(1)

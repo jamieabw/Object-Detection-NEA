@@ -88,7 +88,7 @@ WINDOW_HEIGHT = 800
 def yoloLossPlaceholder():
     pass
 
-model = load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
+model = load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v2.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,
                                                                                           "ConfidenceLoss" : yoloLossPlaceholder})
@@ -103,16 +103,19 @@ class GUI(tk.Tk):
         self.detecting = False
         self.detectToggleButton = tk.Button(self, text="Toggle Detections", command=self.toggleDetection)
         self.detectToggleButton.pack()
+        self.toggleLabel = tk.Label(self, text="Detection: Inactive", fg="red")
+        self.toggleLabel.pack()
         self.frameGenerator = None
         self.setupMenu()
         self.update_interval = 30  # Delay between frames in milliseconds
 
     def toggleDetection(self):
-        print(self.detecting)
         if self.detecting is False:
             self.detecting = True
+            self.toggleLabel.config(text="Detection: Active", fg="green")
         else:
             self.detecting = False
+            self.toggleLabel.config(text="Detection: Inactive", fg="red")
 
         return
 
@@ -146,8 +149,12 @@ class GUI(tk.Tk):
                 frame = next(self.frameGenerator)
                 
                 if frame:
+                    if self.detecting:
+                        himage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
+                        image = draw_yolo_boxes(frame, model.predict(np.transpose(himage, (0, 2, 1, 3))))
+
                     # Convert the frame to a format Tkinter can use
-                    photo = ImageTk.PhotoImage(frame)
+                    photo = ImageTk.PhotoImage(image)
                     
                     # Update the label with the new frame
                     self.imageLabel.config(image=photo)
@@ -174,8 +181,9 @@ class GUI(tk.Tk):
             height = image.height
 
         if self.detecting:
-            himage = (np.array(image.resize((448,448))) / 255.0)[...,:3].reshape((1,448,448,3))
-            image = draw_yolo_boxes(image, model.predict(himage))
+            himage = (np.array(image.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
+            print(himage.shape)
+            image = draw_yolo_boxes(image, model.predict(np.transpose(himage, (0, 2, 1, 3))))
 
         
         
@@ -209,6 +217,7 @@ def draw_yolo_boxes(image, yolo_prediction, s=7):
     # Grid cell size
     cell_width = img_width / s
     cell_height = img_height / s
+    print(img_width, img_height)
 
     """
 
@@ -216,23 +225,22 @@ def draw_yolo_boxes(image, yolo_prediction, s=7):
     """
 
     # Loop through each grid cell
+    output = yolo_prediction[0]
     for j in range(s):
         for i in range(s):
             # Extract the bounding box data for the current grid cell
-            cell_data = yolo_prediction[0, j, i]
-            
-            if cell_data.shape[0] == 6:  # Ensure the shape is correct
-                confidence, x_center, y_center, box_width, box_height, classes = cell_data
+             # Ensure the shape is correct
                 
-                if confidence > 0.4:  # Draw only if confidence is above a threshold
-                    w = box_width * cell_width
-                    h = box_height * cell_height
-                    x1 = (i * cell_width) + (x_center * cell_width) - (w/2)
-                    y1 = (j * cell_width) + (x_center * cell_width) - (h/2)
-                    x2 = x1 + w
-                    y2 = y1 + h
+            if output[i, j, 0] > 0.35:  # Draw only if confidence is above a threshold
+                w = cell_width * output[i, j, 3]
+                h = cell_height * output[i, j, 4]
+                x = (i * cell_width) + (cell_width * output[i, j, 1]) - ((w)/2)
+                y = (j * cell_height) + (cell_height * output[i, j, 2]) - ((h)/2)
+                x2 = x + w
+                y2 = y + h
+                print("DETECTION!")
                     
-                    draw.rectangle([x1, y1, x2, y2], outline="red", width=2)
+                draw.rectangle([x, y, x2, y2], outline="red", width=2)
 
     return image
 
