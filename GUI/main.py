@@ -84,11 +84,12 @@ import keras
 import numpy as np
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
+DEFAULT_THRESHOLD = 0.4
 
 def yoloLossPlaceholder():
     pass
 
-model = load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v2.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
+model = load_model("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v2.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,
                                                                                           "ConfidenceLoss" : yoloLossPlaceholder})
@@ -101,6 +102,7 @@ class GUI(tk.Tk):
         self.imageLabel = tk.Label(self)
         self.imageLabel.pack()
         self.detecting = False
+        self.threshold = DEFAULT_THRESHOLD
         self.detectToggleButton = tk.Button(self, text="Toggle Detections", command=self.toggleDetection)
         self.detectToggleButton.pack()
         self.toggleLabel = tk.Label(self, text="Detection: Inactive", fg="red")
@@ -139,7 +141,7 @@ class GUI(tk.Tk):
 
     def startDisplayWebcamFootage(self):
         self.frameGenerator = None
-        self.frameGenerator = yieldNextFrame(source=1)  # Initialize the generator for the webcam
+        self.frameGenerator = yieldNextFrame(source=0)  # Initialize the generator for the webcam
         self.displayFootage()
 
     def displayFootage(self):
@@ -183,7 +185,7 @@ class GUI(tk.Tk):
         if self.detecting:
             himage = (np.array(image.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
             print(himage.shape)
-            image = draw_yolo_boxes(image, model.predict(np.transpose(himage, (0, 2, 1, 3))))
+            image = draw_yolo_boxes(image, model.predict(np.transpose(himage, (0, 2, 1, 3))), self)
 
         
         
@@ -195,7 +197,7 @@ class GUI(tk.Tk):
 from PIL import Image, ImageDraw
 import numpy as np
 
-def draw_yolo_boxes(image, yolo_prediction, s=7):
+def draw_yolo_boxes(image, yolo_prediction, instance, s=7):
     """
     Draw bounding boxes on the image based on YOLOv1 predictions.
     
@@ -231,7 +233,7 @@ def draw_yolo_boxes(image, yolo_prediction, s=7):
             # Extract the bounding box data for the current grid cell
              # Ensure the shape is correct
                 
-            if output[i, j, 0] > 0.35:  # Draw only if confidence is above a threshold
+            if output[i, j, 0] > instance.threshold:  # Draw only if confidence is above a threshold
                 w = cell_width * output[i, j, 3]
                 h = cell_height * output[i, j, 4]
                 x = (i * cell_width) + (cell_width * output[i, j, 1]) - ((w)/2)
