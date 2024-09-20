@@ -19,7 +19,7 @@ def findBoxes(input, output):
     image = convertToImage(input)
     for j in range(7):
         for i in range(7):
-            if output[i, j, 0] <= 0.24 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
+            if output[i, j, 0] <= 0.4 or output[i, j, 3] == 0 or output[i, j, 4] == 0:
                 if output[i,j,0] != 0: print(output[i,j,0])
                 continue
 

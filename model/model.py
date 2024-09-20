@@ -29,7 +29,7 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 7
 CLASSES = 1 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([10, 22], [0.001, 0.0005, 0.0001])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([12, 24,36], [0.0001, 0.00005, 0.00001,0.000001])
 startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(0)
 trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
@@ -89,7 +89,8 @@ class YoloV1(tf.keras.Model):
         x = self.convLayers(inputs)
         x = layers.Flatten()(x)
         x = self.denseLayer(x)
-        x = layers.Dropout(0.5)(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        #x = layers.Dropout(0.5)(x)
         x = self.outputDense(x)
         x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
         return x
@@ -183,7 +184,7 @@ def testModel(input_shape=(448, 448, 3), num_classes=20, num_boxes=2):
     return model
 
     
-model = testModel(num_classes=1, num_boxes=1)#YoloV1()
+model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 
 model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.3), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
@@ -191,12 +192,12 @@ model.summary()
 print(y_train.shape)
 print(y_test.shape)
 # Load the weights
-model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_06.h5")
+#model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_06.h5")
 #model.save("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v2.h5") 
 
 
 
-model.fit(data_generator(x_train, y_train,12), epochs=30, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
+model.fit(data_generator(x_train, y_train,12), epochs=38, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
            validation_data=data_generator(x_valid, y_valid, 12), validation_steps=len(y_valid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))

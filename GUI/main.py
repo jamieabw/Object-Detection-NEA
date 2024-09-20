@@ -89,7 +89,7 @@ DEFAULT_THRESHOLD = 0.4
 def yoloLossPlaceholder():
     pass
 
-model = load_model("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v2.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
+model = load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,
                                                                                           "ConfidenceLoss" : yoloLossPlaceholder})
@@ -102,11 +102,12 @@ class GUI(tk.Tk):
         self.imageLabel = tk.Label(self)
         self.imageLabel.pack()
         self.detecting = False
-        self.threshold = DEFAULT_THRESHOLD
+        self.threshold = DEFAULT_THRESHOLD # if confidence > threshold then detection will display
         self.detectToggleButton = tk.Button(self, text="Toggle Detections", command=self.toggleDetection)
         self.detectToggleButton.pack()
         self.toggleLabel = tk.Label(self, text="Detection: Inactive", fg="red")
         self.toggleLabel.pack()
+        self.currentFrame = None
         self.frameGenerator = None
         self.setupMenu()
         self.update_interval = 30  # Delay between frames in milliseconds
@@ -119,6 +120,9 @@ class GUI(tk.Tk):
             self.detecting = False
             self.toggleLabel.config(text="Detection: Inactive", fg="red")
 
+
+        if self.currentFrame is not None:
+            self.displayCurrentFrame()
         return
 
     def setupMenu(self):
@@ -128,7 +132,24 @@ class GUI(tk.Tk):
         self.fileMenu.add_cascade(label="Import Image", command=self.displayImage)
         self.fileMenu.add_cascade(label="Import Video", command=self.startDisplayVideo)
         self.fileMenu.add_cascade(label="Import Webcam Footage", command=self.startDisplayWebcamFootage)
+        self.menuBar.add_cascade(label="Settings", command=self.openSettings)
         self.config(menu=self.menuBar)
+
+    def openSettings(self):
+        self.settingsWindow = tk.Toplevel(self)
+        self.settingsWindow.geometry("600x400")
+        self.settingsWindow.title("Settings")
+        self.thresholdSlider = tk.Scale(self.settingsWindow, from_=0, to=1.0, resolution=0.005, orient="horizontal", label="Confidence Threshold:", length=135)
+        self.thresholdSlider.set(self.threshold)
+        self.thresholdSlider.pack()
+        self.applySettingsButton = tk.Button(self.settingsWindow, text="Apply Settings", command=self.applySettings)
+        self.applySettingsButton.pack()
+
+    def applySettings(self):
+        self.threshold = self.thresholdSlider.get()
+        if self.currentFrame is not None:
+            self.displayCurrentFrame()
+
 
 
     def startDisplayVideo(self):
@@ -141,26 +162,17 @@ class GUI(tk.Tk):
 
     def startDisplayWebcamFootage(self):
         self.frameGenerator = None
-        self.frameGenerator = yieldNextFrame(source=0)  # Initialize the generator for the webcam
+        self.frameGenerator = yieldNextFrame(source=1)  # Initialize the generator for the webcam
         self.displayFootage()
 
     def displayFootage(self):
         if self.frameGenerator is not None:
             try:
                 # Get the next frame from the generator
-                frame = next(self.frameGenerator)
+                self.currentFrame = next(self.frameGenerator)
                 
-                if frame:
-                    if self.detecting:
-                        himage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
-                        image = draw_yolo_boxes(frame, model.predict(np.transpose(himage, (0, 2, 1, 3))))
-
-                    # Convert the frame to a format Tkinter can use
-                    photo = ImageTk.PhotoImage(image)
-                    
-                    # Update the label with the new frame
-                    self.imageLabel.config(image=photo)
-                    self.imageLabel.image = photo  # Keep a reference to avoid garbage collection
+                if self.currentFrame:
+                    self.displayCurrentFrame()
                 else:
                     print("No frame received")
             except StopIteration:
@@ -174,22 +186,26 @@ class GUI(tk.Tk):
 
     def displayImage(self):
         self.frameGenerator = None
-        image = readImage(filedialog.askopenfilename(title="Select an Image File", filetypes=[("Image files", "*.JPG"), ("All Files", "*.*")]))
-        width = image.width
-        height = image.height
+        self.currentFrame = readImage(filedialog.askopenfilename(title="Select an Image File", filetypes=[("Image files", "*.JPG"), ("All Files", "*.*")]))
+        width = self.currentFrame.width
+        height = self.currentFrame.height
         while width > WINDOW_WIDTH or height > WINDOW_HEIGHT:
-            image = image.resize((width // 2, height // 2))
-            width = image.width
-            height = image.height
+            self.currentFrame = self.currentFrame.resize((width // 2, height // 2))
+            width = self.currentFrame.width
+            height = self.currentFrame.height
 
+        self.displayCurrentFrame()
+
+        
+        
+
+
+    def displayCurrentFrame(self):
+        frame = self.currentFrame.copy()
         if self.detecting:
-            himage = (np.array(image.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
-            print(himage.shape)
-            image = draw_yolo_boxes(image, model.predict(np.transpose(himage, (0, 2, 1, 3))), self)
-
-        
-        
-        self.photo = ImageTk.PhotoImage(image)
+            self.modelInputImage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
+            frame = draw_yolo_boxes(frame, model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self)
+        self.photo = ImageTk.PhotoImage(frame)
         self.imageLabel.config(image=self.photo)
         self.imageLabel.pack()
 
