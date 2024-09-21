@@ -29,7 +29,7 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 7
 CLASSES = 1 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([12, 24,36], [0.0001, 0.00005, 0.00001,0.000001])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([200,400,600,20000,30000], [0.00035 * scale for scale in [2.5,2,2,1,0.1,0.1]])
 startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(0)
 trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
@@ -94,110 +94,23 @@ class YoloV1(tf.keras.Model):
         x = self.outputDense(x)
         x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
         return x
-    
-
-def testModel(input_shape=(448, 448, 3), num_classes=20, num_boxes=2):
-    # Input layer
-    inputs = layers.Input(shape=input_shape)
-
-    # Convolutional Layers
-    x = layers.Conv2D(64, (7, 7), strides=(2, 2), padding='same', kernel_regularizer=l2_regularizer)(inputs)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
-
-    x = layers.Conv2D(192, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
-
-    x = layers.Conv2D(128, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(256, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(256, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(512, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
-
-    for _ in range(4):
-        x = layers.Conv2D(256, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU(alpha=0.1)(x)
-        
-        x = layers.Conv2D(512, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(512, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
-
-    for _ in range(2):
-        x = layers.Conv2D(512, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU(alpha=0.1)(x)
-        
-        x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(1024, (3, 3), strides=(2, 2), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
-    x = layers.BatchNormalization()(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-
-    # Fully Connected Layers
-    x = layers.Flatten()(x)
-    x = layers.Dense(4096, kernel_regularizer=l2_regularizer)(x)
-    x = layers.LeakyReLU(alpha=0.1)(x)
-    x = layers.Dropout(0.05)(x)
-    x = layers.Dense(7 * 7 * (num_classes + (num_boxes * 5)))(x) # S x S x (B * 5 + C)
-    x = layers.Reshape((GRID_SIZE, GRID_SIZE, (BBOXES * 5) + CLASSES))(x)
-    
-    # Final Model
-    model = tf.keras.Model(inputs, x)
-    return model
 
     
 model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 
-model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.3), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=0.00035, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+#CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
 model.summary()
 print(y_train.shape)
 print(y_test.shape)
 # Load the weights
-#model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_06.h5")
-#model.save("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v2.h5") 
+model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_20.h5")
+model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5") 
 
 
 
-model.fit(data_generator(x_train, y_train,12), epochs=38, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
+model.fit(data_generator(x_train, y_train,12), epochs=40, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
            validation_data=data_generator(x_valid, y_valid, 12), validation_steps=len(y_valid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))

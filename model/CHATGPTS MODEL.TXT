@@ -1,0 +1,86 @@
+def testModel(input_shape=(448, 448, 3), num_classes=20, num_boxes=2):
+    # Input layer
+    inputs = layers.Input(shape=input_shape)
+
+    # Convolutional Layers
+    x = layers.Conv2D(64, (7, 7), strides=(2, 2), padding='same', kernel_regularizer=l2_regularizer)(inputs)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    x = layers.Conv2D(192, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    x = layers.Conv2D(128, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(256, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(256, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(512, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    for _ in range(4):
+        x = layers.Conv2D(256, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        
+        x = layers.Conv2D(512, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(512, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+
+    for _ in range(2):
+        x = layers.Conv2D(512, (1, 1), padding='same', kernel_regularizer=l2_regularizer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        
+        x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+        x = layers.BatchNormalization()(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(1024, (3, 3), strides=(2, 2), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    x = layers.Conv2D(1024, (3, 3), padding='same', kernel_regularizer=l2_regularizer)(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+
+    # Fully Connected Layers
+    x = layers.Flatten()(x)
+    x = layers.Dense(4096, kernel_regularizer=l2_regularizer)(x)
+    x = layers.LeakyReLU(alpha=0.1)(x)
+    x = layers.Dropout(0.05)(x)
+    x = layers.Dense(7 * 7 * (num_classes + (num_boxes * 5)))(x) # S x S x (B * 5 + C)
+    x = layers.Reshape((GRID_SIZE, GRID_SIZE, (BBOXES * 5) + CLASSES))(x)
+    
+    # Final Model
+    model = tf.keras.Model(inputs, x)
+    return model

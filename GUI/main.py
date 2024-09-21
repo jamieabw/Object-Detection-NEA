@@ -77,22 +77,56 @@ if __name__ == "__main__":
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk, ImageDraw
+import keras.regularizers
 from videoHandler import yieldNextFrame, readImage
 import tensorflow as tf
 from keras.models import load_model
-import keras
+from keras import layers
 import numpy as np
+from CNNblocks import CNNBlock
+import keras
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
+CLASSES = 1
+GRID_SIZE = 7
+BBOXES = 1
+KERNELS = [64, 192, 128, 256, 256, 512, 256, 512, 256, 512, 256, 512, 256, 512, 512, 1024, 512, 1024, 512, 1024, 1024, 1024]
+SIZES = [7, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 3, 3]
+STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
+l2_regularizer = keras.regularizers.l2(0)
 
 def yoloLossPlaceholder():
     pass
 
-model = load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
+class YoloV1(tf.keras.Model):
+    def __init__(self, grid_size=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
+        super(YoloV1, self).__init__()
+        self.grid_size = grid_size
+        
+        self.classes = classes
+        self.bboxes = bboxes
+        self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES, l2_regularizer)
+        self.denseLayer = layers.Dense(4096, kernel_regularizer=l2_regularizer)
+        self.outputDense = layers.Dense(self.grid_size * self.grid_size * ((5 * self.bboxes) + self.classes), kernel_regularizer=l2_regularizer) # adding a relu activation to this breaks the loss i think - dunno why
+
+    def call(self, inputs):
+        x = self.convLayers(inputs)
+        x = layers.Flatten()(x)
+        x = self.denseLayer(x)
+        x = layers.LeakyReLU(alpha=0.1)(x)
+        #x = layers.Dropout(0.5)(x)
+        x = self.outputDense(x)
+        x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
+        return x
+
+model = YoloV1()
+model.build((None, 448,448,3))
+model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5")
+"""#load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,
-                                                                                          "ConfidenceLoss" : yoloLossPlaceholder})
+                                                                                          "ConfidenceLoss" : yoloLossPlaceholder})"""
 
 class GUI(tk.Tk):
     def __init__(self):
