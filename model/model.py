@@ -99,7 +99,7 @@ class YoloV1(tf.keras.Model):
 model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 
-model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=0.00035, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
 #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
 model.summary()
 print(y_train.shape)
