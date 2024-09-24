@@ -3,7 +3,7 @@ def yoloLoss(yTrue, yPred):
     confidenceLoss = ConfidenceLoss(yTrue, yPred)
     coordLoss = boundingBoxLoss(yTrue, yPred)
     classLoss = ClassLoss(yTrue, yPred)
-    totalLoss = (3 * coordLoss) + (1 * confidenceLoss) + (0 * classLoss)
+    totalLoss = (3 * coordLoss) + (1 * confidenceLoss) + (1 * classLoss)
     return totalLoss
 
 def ConfidenceLoss(yTrue, yPred):

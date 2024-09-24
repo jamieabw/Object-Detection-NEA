@@ -196,7 +196,7 @@ class GUI(tk.Tk):
 
     def startDisplayWebcamFootage(self):
         self.frameGenerator = None
-        self.frameGenerator = yieldNextFrame(source=1)  # Initialize the generator for the webcam
+        self.frameGenerator = yieldNextFrame(source=0)  # Initialize the generator for the webcam
         self.displayFootage()
 
     def displayFootage(self):

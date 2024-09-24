@@ -39,42 +39,42 @@ def encodeLabels(textFileDir, S, B, C):
                 continue  # Skip if the line does not contain enough properties
             
             # Extract bounding box and class info
-            class_id = int(properties[0])  # Class label
-            bbox_x = float(properties[1])  # X center
-            bbox_y = float(properties[2])  # Y center
-            bbox_w = float(properties[3])  # Width
-            bbox_h = float(properties[4])  # Height
+            classId = int(properties[0])  # Class label
+            bboxX = float(properties[1])  # X center
+            bboxY = float(properties[2])  # Y center
+            bboxW = float(properties[3])  # Width
+            bboxH = float(properties[4])  # Height
             
             # Determine which cell the bounding box belongs to
-            cell_x = floor(bbox_x // cellSize)  # Cell row index
-            cell_y = floor(bbox_y // cellSize)  # Cell column index
-            if bbox_x > 1 or bbox_y > 1:
+            cellX = floor(bboxX // cellSize)  # Cell row index
+            cellY = floor(bboxY // cellSize)  # Cell column index
+            if bboxX > 1 or bboxY > 1:
                 continue
             
             # Calculate bounding box relative to the cell
-            relative_x = (bbox_x % cellSize) / cellSize
-            relative_y = (bbox_y % cellSize) / cellSize
-            relative_w = bbox_w / cellSize
-            relative_h = bbox_h / cellSize
+            relativeX = (bboxX % cellSize) / cellSize
+            relativeY = (bboxY % cellSize) / cellSize
+            relativeW = bboxW / cellSize
+            relativeH = bboxH / cellSize
             
             # Assign values for each bounding box (support multiple B)
             for b in range(B):
-                box_start = b * (5 + C)  # Start index for this box in the label array
+                boxStart = b * (5 + C)  # Start index for this box in the label array
                 
                 # If the confidence is 0 (no bounding box assigned yet), assign this box
                 #print(cell_x, cell_y, bbox_y)
-                if label[cell_x, cell_y, box_start] == 0:
+                if label[cellX, cellY, boxStart] == 0:
                     # Assign the confidence (objectness)
-                    label[cell_x, cell_y, box_start] = 1
+                    label[cellX, cellY, boxStart] = 1
                     
                     # Encode the bounding box (x, y, w, h)
-                    label[cell_x, cell_y, box_start + 1] = relative_x
-                    label[cell_x, cell_y, box_start + 2] = relative_y
-                    label[cell_x, cell_y, box_start + 3] = relative_w
-                    label[cell_x, cell_y, box_start + 4] = relative_h
+                    label[cellX, cellY, boxStart + 1] = relativeX
+                    label[cellX, cellY, boxStart + 2] = relativeY
+                    label[cellX, cellY, boxStart + 3] = relativeW
+                    label[cellX, cellY, boxStart + 4] = relativeH
                     
                     # One-hot encode the class (start from box_start + 5)
-                    label[cell_x, cell_y, box_start + 5 + class_id] = 1
+                    label[cellX, cellY, boxStart + 5 + classId] = 1
                     
                     break  # Only assign one bounding box per object
             

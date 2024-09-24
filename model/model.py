@@ -7,8 +7,10 @@ from dataProcessing import preprocessData, convertToArray
 import numpy as np
 import random
 # DEBUGGING
-physical_devices = tf.config.list_physical_devices("GPU")
-tf.config.experimental.set_memory_growth(physical_devices[0], True)
+GPU = True
+if GPU:
+    physical_devices = tf.config.list_physical_devices("GPU")
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -29,7 +31,7 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 7
 CLASSES = 1 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([200,400,600,20000,30000], [0.00035 * scale for scale in [2.5,2,2,1,0.1,0.1]])
+lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([200,400,600,20000,30000], [0.00035 * scale for scale in [2.5,2,1.5,1,0.5,0.1]])
 startVal = 0
 l2_regularizer = tf.keras.regularizers.l2(0)
 trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
@@ -121,17 +123,35 @@ while True:
     findBoxes(lossTestData, result)
     print("\n\n\n\n")
 
-    print("\n\n\n\n")
-    print(result)
-    print("\n\n\n\n")
-    print(lossTestTrue)"""
-for data in x_test:
-    print(data.shape)
-    data = convertToArray(data).astype("float32") / 255.0
-    print(data.shape)
-    data2 = np.reshape(data, (1,448,448,3))
-    print(data.shape)
-    findBoxes(data, model.predict(data2))  
+        print("\n\n\n\n")
+        print(result)
+        print("\n\n\n\n")
+        print(lossTestTrue)
+
+
+def test():
+    for data in x_test:
+        print(data.shape)
+        data = convertToArray(data).astype("float32") / 255.0
+        print(data.shape)
+        data2 = np.reshape(data, (1,448,448,3))
+        print(data.shape)
+        findBoxes(data, model.predict(data2))
+
+
+if __name__ == "__main__":
+    model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
+    model.build(input_shape=(None, 448, 448, 3))
+
+    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+    #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
+    model.summary()
+    print(y_train.shape)
+    print(y_test.shape)
+    # Load the weights
+    model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
+    #model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
+    test()
 
 
 """NOTE AND TODO: right there is an issue with training, need to try a way bigger dataset and try it on that to see if it breaks the network like
