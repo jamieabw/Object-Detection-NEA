@@ -122,7 +122,7 @@ class YoloV1(tf.keras.Model):
 
 model = YoloV1()
 model.build((None, 448,448,3))
-model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5")
+model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
 """#load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,

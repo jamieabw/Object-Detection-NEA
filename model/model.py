@@ -112,8 +112,22 @@ model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5")
 
 
 
-model.fit(data_generator(x_train, y_train,12), epochs=40, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
-           validation_data=data_generator(x_valid, y_valid, 12), validation_steps=len(y_valid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
+def train():
+    model.fit(data_generator(x_train, y_train,12), epochs=40, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
+            validation_data=data_generator(x_valid, y_valid, 12), validation_steps=len(y_valid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
+
+def test():
+    for data in x_test:
+        print(data.shape)
+        data = convertToArray(data).astype("float32") / 255.0
+        print(data.shape)
+        data2 = np.reshape(data, (1,448,448,3))
+        print(data.shape)
+        findBoxes(data, model.predict(data2))
+
+
+
+
 """lossTestData = convertToArray(x_test[1]).astype("float32") / 255.0
 lossTestTrue = y_test[1].reshape((1,8,8,25))
 print(lossTestData.shape)
@@ -126,17 +140,7 @@ while True:
         print("\n\n\n\n")
         print(result)
         print("\n\n\n\n")
-        print(lossTestTrue)
-
-
-def test():
-    for data in x_test:
-        print(data.shape)
-        data = convertToArray(data).astype("float32") / 255.0
-        print(data.shape)
-        data2 = np.reshape(data, (1,448,448,3))
-        print(data.shape)
-        findBoxes(data, model.predict(data2))
+        print(lossTestTrue
 
 
 if __name__ == "__main__":
@@ -152,23 +156,4 @@ if __name__ == "__main__":
     model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
     #model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
     test()
-
-
-"""NOTE AND TODO: right there is an issue with training, need to try a way bigger dataset and try it on that to see if it breaks the network like
-THE ISSUE SEEMS TO BE WITH 0KB TXT FILES WHERE THERE ARE NO OBJETS """
-
-
-"""FINAL SUMMER NOTE --- the model seems to be able to learn specific datasets decently well (such as the drones) however fails to learn of others (predicts
- basically the same bounding box no matter the image), need to add a way to convert other YOLO forms into YOLO darknet form so it can be learnt,
-also need to implement mAP calculation and things like IOU and NMS, if the model doesnt learn larger datasets well enough then a full recreation of the project
-could be a solution to ensure the code is actually right and that i havent fucked something random up somewhere. once the training is working properly the rest of
-the project should be quite easy to finish."""
-
-
-
-""" DO THIS NEXT BELOW"""
-# NOTE: a way to test the loss function will be to continuously train it on one piece of test data to set if it actually improves!! do this when possible
-
-"""NOTE: IF THE TRAINING IS EXTREMELY FUCKING SLOW, ONLY USE ONE MONITOR IT SEEMS TO DO THE TRICK"""
-
-"""it is training, i now need to get it so it can import multiple classes not just one and train it on that"""
+"""
