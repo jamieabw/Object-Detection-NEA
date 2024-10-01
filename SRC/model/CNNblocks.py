@@ -5,9 +5,9 @@ from keras import layers
 POOLING_POSITIONS = [1, 5, 15]
 
 class CNNBlock(layers.Layer):
-    def __init__(self, kernels, sizes, strides, l2_regularizer):
+    def __init__(self, kernels, sizes, strides, l2Regularizer):
         super(CNNBlock, self).__init__()
-        self.convLayers = [layers.Conv2D(k, a, s, padding="same", kernel_regularizer=l2_regularizer) for k, a, s in zip(kernels, sizes, strides)]
+        self.convLayers = [layers.Conv2D(k, a, s, padding="same", kernel_regularizer=l2Regularizer) for k, a, s in zip(kernels, sizes, strides)]
         self.poolingLayers = [layers.MaxPooling2D(2, 2, padding="same") for i in range(4)]
         self.leakyRelus = [layers.LeakyReLU(alpha=0.1) for _ in kernels]
         self.batchNorm = [layers.BatchNormalization() for _ in kernels]

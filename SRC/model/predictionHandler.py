@@ -8,10 +8,6 @@ cellSize = 448 / 7
 testDir = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset - CROWDHUMAN\\CrowdHuman_train01\\Images\\273271,1ba93000e00e011c.jpg"
 classes = list(range(20))
 classesNames = ["Person"]
-"""classesNames = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", 
-           "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", 
-           "pottedplant", "sheep", "sofa", "train", "tvmonitor"]"""
-
 def findBoxes(input, output):
     w,h,x,y = (0,0,0,0)
     bboxes = []

@@ -5,28 +5,9 @@ import numpy as np
 from random import shuffle
 from PIL import Image
 from math import floor
-"""def encodeLabels(textFileDir, S, B, C):
-    label = np.zeros(shape=[S,S,B * (C + 5)])
-    cellSize = 1 / S
-    with open(textFileDir, "r") as t:
-        for line in t.readlines():
-            properties = line.split(" ")
-            if len(properties) < 4:
-                break # THIS IS BROKEN, NEED TO FIND A WAY TO ENCODE LABELS WHERE THERE ARE NO OBJECTS
-                #print(properties)
-            cell = [int(float(properties[1]) // cellSize), int(float(properties[2]) // cellSize)]
-            #print(cell)
-            #print((float(properties[1])  % cellSize) / cellSize)
-            label[cell[0], cell[1],0] = 1
-            label[cell[0], cell[1],1] = (float(properties[1])  % cellSize) / cellSize
-            label[cell[0], cell[1],2] = (float(properties[2])  % cellSize) / cellSize
-            label[cell[0], cell[1],3] = float(properties[3]) / cellSize
-            label[cell[0], cell[1],4] = float(properties[4]) / cellSize
-            label[cell[0], cell[1],5] = 1
-        return np.nan_to_num(label)"""
-    
 
 
+# encodes labels based on the annotation text files, will have 3 dimensions: S, S, 5B + C
 def encodeLabels(textFileDir, S, B, C):
     # Create label array: [S, S, B * (5 + C)]
     label = np.zeros(shape=[S, S, (B * 5) + C])
@@ -81,16 +62,19 @@ def encodeLabels(textFileDir, S, B, C):
     return np.nan_to_num(label)
     
 
+# converts an image to a numpy array and matches colour channels correctly
 def convertToArray(imagePath, size=(448,448)):
     image = Image.open(imagePath)
     return np.transpose(np.array(image.resize(size)), (1,0,2))[:, :, :3] # np.array turns the image into an array of [h,w,c] it needs to be [w,h,c]
 
+# converts a numpy array into a PIL image and matches colour channels correctly
 def convertToImage(image):
     image *= 255
     image = np.array(image, dtype="uint8")
     return Image.fromarray(np.transpose(image, (1,0,2)))
 
 
+# adds images and labels to separate lists, ensuring that pairs are still maintained
 def preprocessData(folderDir, S, B, C, testData=False):
     images =[] #np.array([])
     labels =[] #np.array([])
@@ -112,41 +96,18 @@ def preprocessData(folderDir, S, B, C, testData=False):
     images = np.array(images)
     labels = np.array(labels)
     print(labels.shape)
-    # Generate a permutation of indices
+    # test data cannot be shuffled here, as some test data will not have a corresponding annotation
+    # therefore elements would be mismatched in both arrays leading to problems when testing the model
     if not testData:
         indices = np.arange(len(images))
         np.random.shuffle(indices)
 
         # Apply the permutation to both arrays
-        shuffled_images = images[indices]
+        shuffledImages = images[indices]
         print(labels.shape)
-        shuffled_labels = labels[indices, ...]
-        return shuffled_images, shuffled_labels
+        shuffledLabels = labels[indices, ...]
+        return shuffledImages, shuffledLabels
     
 
 # Shuffle images and labels using the permutation of indices
     return images, labels
-
-"""def preprocessData(folderDir):
-    images =[] #np.array([])
-    labels =[] #np.array([])
-    print("hrehehrererherer")
-    print(folderDir)
-    counter = 0
-    for file in os.listdir(folderDir):
-        if counter == 2000: break
-        if "txt" in file:
-            labels.append(encodeLabels(f"{folderDir}\\{file}", 8,1,1))
-            #np.append(labels, encodeLabels(f"{folderDir}\\{file}", 8,1,1))
-        else:
-            images.append(convertToArray(f"{folderDir}\\{file}"))
-            #np.append(images, jpg_to_resized_array(f"{folderDir}\\{file}")
-        counter +=1 
-    images = np.array(images)
-    labels = np.array(labels)
-
-    print(images.shape)
-    print(labels.shape)
-    images = images.astype("float32") / 255.0
-    return images, labels"""
-# size divided by cell size = bbox size relative to cells

@@ -2,6 +2,9 @@ import cv2
 from PIL import Image
 import numpy as np
 # NOTE: laptop requires source=0 desktop source=1
+
+# a generator function which gets the next frame and returns it after
+# required preprocessing is done (otherwise colour channels will be mixed)
 def yieldNextFrame(source=0, videoDir=None):
     if videoDir == None:
         capture = cv2.VideoCapture(source)

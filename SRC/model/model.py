@@ -1,3 +1,4 @@
+
 import tensorflow as tf
 from keras import layers
 from CNNblocks import CNNBlock
@@ -9,8 +10,8 @@ import random
 # DEBUGGING
 GPU = True
 if GPU:
-    physical_devices = tf.config.list_physical_devices("GPU")
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    physicalDevices = tf.config.list_physical_devices("GPU")
+    tf.config.experimental.set_memory_growth(physicalDevices[0], True)
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
@@ -31,9 +32,9 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 GRID_SIZE = 7
 CLASSES = 1 # training only on crowdhuman initially
 BBOXES = 1
-lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([200,400,600,20000,30000], [0.00035 * scale for scale in [2.5,2,1.5,1,0.5,0.1]])
+lrSchedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([200,400,600,20000,30000], [0.00035 * scale for scale in [2.5,2,1.5,1,0.5,0.1]])
 startVal = 0
-l2_regularizer = tf.keras.regularizers.l2(0)
+l2Regularizer = tf.keras.regularizers.l2(0)
 trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
 validationDirectory = 'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\PASCAL VOC\\valid\\VOCdevkit\\VOC2007\\JPEGImages'
 testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
@@ -43,11 +44,11 @@ testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets
 #TODO: CLEAN THIS CODE UP ITS A MESS BUT DONT BREAK ANYTHING, IMPLEMENT NMS AND THEN ALSO TEST IT ON A UNSEEN IMAGE
 
 # TEST DATA REMOVE AFTER
-x_train, y_train =preprocessData(trainingDirectory, GRID_SIZE, BBOXES, CLASSES)
-x_valid, y_valid = preprocessData(validationDirectory, GRID_SIZE, BBOXES, CLASSES)
-x_test, y_test =preprocessData(testDirectory, GRID_SIZE, BBOXES, CLASSES, True)
+xTrain, yTrain =preprocessData(trainingDirectory, GRID_SIZE, BBOXES, CLASSES)
+xValid, yValid = preprocessData(validationDirectory, GRID_SIZE, BBOXES, CLASSES)
+xTest, yTest =preprocessData(testDirectory, GRID_SIZE, BBOXES, CLASSES, True)
 
-def data_generator(imagePaths, labels, batchSize):
+def dataGenerator(imagePaths, labels, batchSize):
     startVal = 0
 
     # Convert imagePaths and labels to lists to allow shuffling
@@ -77,15 +78,15 @@ def data_generator(imagePaths, labels, batchSize):
 
 
 class YoloV1(tf.keras.Model):
-    def __init__(self, grid_size=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
+    def __init__(self, gridSize=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
         super(YoloV1, self).__init__()
-        self.grid_size = grid_size
+        self.gridSize = gridSize
         
         self.classes = classes
         self.bboxes = bboxes
-        self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES, l2_regularizer)
-        self.denseLayer = layers.Dense(4096, kernel_regularizer=l2_regularizer)
-        self.outputDense = layers.Dense(self.grid_size * self.grid_size * ((5 * self.bboxes) + self.classes), kernel_regularizer=l2_regularizer) # adding a relu activation to this breaks the loss i think - dunno why
+        self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES, l2Regularizer)
+        self.denseLayer = layers.Dense(4096, kernel_regularizer=l2Regularizer)
+        self.outputDense = layers.Dense(self.gridSize * self.gridSize * ((5 * self.bboxes) + self.classes), kernel_regularizer=l2Regularizer) # adding a relu activation to this breaks the loss i think - dunno why
 
     def call(self, inputs):
         x = self.convLayers(inputs)
@@ -94,18 +95,18 @@ class YoloV1(tf.keras.Model):
         x = layers.LeakyReLU(alpha=0.1)(x)
         #x = layers.Dropout(0.5)(x)
         x = self.outputDense(x)
-        x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
+        x =  layers.Reshape((self.gridSize, self.gridSize, (5 * self.bboxes) + self.classes))(x)
         return x
 
     
 model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 
-model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
 #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
 model.summary()
-print(y_train.shape)
-print(y_test.shape)
+print(yTrain.shape)
+print(yTest.shape)
 # Load the weights
 model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_20.h5")
 model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5") 
@@ -113,17 +114,31 @@ model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5")
 
 
 def train():
-    model.fit(data_generator(x_train, y_train,12), epochs=40, verbose=1, steps_per_epoch=len(y_train) /12, callbacks=[checkpoint],
-            validation_data=data_generator(x_valid, y_valid, 12), validation_steps=len(y_valid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
+    model.fit(dataGenerator(xTrain, yTrain,12), epochs=40, verbose=1, steps_per_epoch=len(yTrain) /12, callbacks=[checkpoint],
+            validation_data=dataGenerator(xValid, yValid, 12), validation_steps=len(yValid) / 12)#, validation_data=data_generator(x_valid, y_valid,16),validation_steps=len(y_valid) / 16)"""
 
 def test():
-    for data in x_test:
+    for data in xTest:
         print(data.shape)
         data = convertToArray(data).astype("float32") / 255.0
         print(data.shape)
         data2 = np.reshape(data, (1,448,448,3))
         print(data.shape)
         findBoxes(data, model.predict(data2))
+
+if __name__ == "__main__":
+    model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
+    model.build(input_shape=(None, 448, 448, 3))
+
+    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+    #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
+    model.summary()
+    print(yTrain.shape)
+    print(yTest.shape)
+    # Load the weights
+    model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
+    #model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
+    test()
 
 
 
@@ -143,17 +158,5 @@ while True:
         print(lossTestTrue
 
 
-if __name__ == "__main__":
-    model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
-    model.build(input_shape=(None, 448, 448, 3))
 
-    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lr_schedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
-    #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
-    model.summary()
-    print(y_train.shape)
-    print(y_test.shape)
-    # Load the weights
-    model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
-    #model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
-    test()
 """
