@@ -23,9 +23,9 @@ def findBoxes(input, output):
             h = cellSize * output[i, j, 4]
             x = (i * cellSize) + (cellSize * output[i, j, 1]) - ((w)/2)
             y = (j * cellSize) + (cellSize * output[i, j, 2]) - ((h)/2)
-            class_probs = output[i, j, 5:]  # Assuming class probabilities start from index 6
-            class_id = tf.argmax(class_probs)
-            c = classes[class_id]
+            classProbs = output[i, j, 5:]  # Assuming class probabilities start from index 6
+            classId = tf.argmax(classProbs)
+            c = classes[classId]
 
             print("DETECTION!")
             bboxes.append([x,y,w,h,c])
