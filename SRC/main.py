@@ -11,6 +11,9 @@ import numpy as np
 from model.CNNblocks import CNNBlock
 #from model.model import YoloV1# this wont work for some reason, something to do with CNNBlocks
 import keras
+import subprocess
+import cv2
+import threading
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
@@ -21,6 +24,9 @@ KERNELS = [64, 192, 128, 256, 256, 512, 256, 512, 256, 512, 256, 512, 256, 512, 
 SIZES = [7, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 1, 3, 3, 3]
 STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 l2Regularizer = keras.regularizers.l2(0)
+webcams = {}
+DEFAULT_CAM_SOURCE = 0
+
 
 
 """
@@ -33,6 +39,29 @@ TODO: add a webcam device changer to fix the problem of switching from laptop to
 # breaks loading an entire model
 def yoloLossPlaceholder():
     pass
+
+def getWebcamDevices():
+    result = subprocess.run(['wmic', 'path', 'Win32_PnPEntity', 'where', 'Caption like "%cam%"', 'get', 'Caption'], stdout=subprocess.PIPE)
+    output = result.stdout.decode('utf-8').strip().split("\n")[1:]  # Skip the header line
+
+        # Clean up the output and remove any empty lines
+    device_names = [line.strip() for line in output if line.strip()]
+    
+    print("Available webcams:")
+        
+        # Loop through possible OpenCV sources (device IDs 0-9)
+    for idx, name in enumerate(device_names):
+        print(f"Webcam source ID: {idx}, Name: {name}")
+        webcams.update({name : idx})
+            # Check if OpenCV can access the device
+        cap = cv2.VideoCapture(idx)
+        if cap.isOpened():
+            print(f"OpenCV can access webcam {idx}: {name}")
+            cap.release()
+        else:
+            print(f"OpenCV cannot access webcam {idx}: {name}")
+
+    print(webcams)
 
 
 
@@ -84,7 +113,12 @@ class GUI(tk.Tk):
         self.currentFrame = None
         self.frameGenerator = None
         self.setupMenu()
-        self.update_interval = 30  # Delay between frames in milliseconds
+        self.maxFrameRate = 30
+        self.updateInterval = 1000 // self.maxFrameRate  # Delay between frames in milliseconds
+        self.webcamSource = DEFAULT_CAM_SOURCE
+        self.webcamOptions = list(webcams.keys())
+        self.webcamName = tk.StringVar()
+        self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
 
 
     # function used for toggle button's command, is called when the button is pressed
@@ -122,13 +156,25 @@ class GUI(tk.Tk):
         self.thresholdSlider = tk.Scale(self.settingsWindow, from_=0, to=1.0, resolution=0.005, orient="horizontal", label="Confidence Threshold:", length=135)
         self.thresholdSlider.set(self.threshold)
         self.thresholdSlider.pack()
+        self.frameRateSlider = tk.Scale(self.settingsWindow, from_=1, to=60, resolution=1, orient="horizontal", label="Maximum Frame Rate:", length=135)
+        self.frameRateSlider.set(self.maxFrameRate)
+        self.frameRateSlider.pack()
+        self.webcamDropdownLabel = tk.Label(self.settingsWindow, text="Webcam Device:")
+        self.webcamDropdownLabel.pack()
+        self.webcamDropdown = tk.OptionMenu(self.settingsWindow, self.webcamName, *self.webcamOptions)
+        self.webcamDropdown.pack()
         self.applySettingsButton = tk.Button(self.settingsWindow, text="Apply Settings", command=self.applySettings)
         self.applySettingsButton.pack()
+
+        
 
 
     # function is used for the button in settings, it applies all settings
     def applySettings(self):
         self.threshold = self.thresholdSlider.get()
+        self.webcamSource = webcams.get(self.webcamName.get())
+        self.maxFrameRate = self.frameRateSlider.get()
+        self.updateInterval = 1000 // self.maxFrameRate
         if self.currentFrame is not None:
             self.displayCurrentFrame()
 
@@ -148,7 +194,7 @@ class GUI(tk.Tk):
     # function used for starting webcam footage
     def startDisplayWebcamFootage(self):
         self.frameGenerator = None
-        self.frameGenerator = yieldNextFrame(source=0)  # Initialize the generator for the webcam
+        self.frameGenerator = yieldNextFrame(source=self.webcamSource)  # Initialize the generator for the webcam
         self.displayFootage()
 
 
@@ -171,7 +217,7 @@ class GUI(tk.Tk):
                 print(f"Error displaying frame: {e}")
 
             # Schedule the next frame update
-            self.after(self.update_interval, self.displayFootage)
+            self.after(self.updateInterval, self.displayFootage)
 
     # loads an image in when user is importing image
 
@@ -259,6 +305,7 @@ def drawYoloBoxes(image, yoloPrediction, instance, s=7):
 
 
 if __name__ == "__main__":
+    getWebcamDevices()
     gui = GUI()
     gui.mainloop()
 # THIS WORKS FIGURE OUT WHY!!!!!!!!
