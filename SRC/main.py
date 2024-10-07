@@ -14,6 +14,7 @@ import keras
 import subprocess
 import cv2
 import threading
+import time
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
@@ -40,26 +41,35 @@ TODO: add a webcam device changer to fix the problem of switching from laptop to
 def yoloLossPlaceholder():
     pass
 
+def getWebcamDevicesThreadHandler():
+    while True:
+        getWebcamDevices()
+        time.sleep(2.5)
+
+WEBCAM_DETECTION_THREAD = threading.Thread(target=getWebcamDevicesThreadHandler, daemon=True)
+
 def getWebcamDevices():
+    webcams.clear()
     result = subprocess.run(['wmic', 'path', 'Win32_PnPEntity', 'where', 'Caption like "%cam%"', 'get', 'Caption'], stdout=subprocess.PIPE)
     output = result.stdout.decode('utf-8').strip().split("\n")[1:]  # Skip the header line
 
         # Clean up the output and remove any empty lines
-    device_names = [line.strip() for line in output if line.strip()]
+    deviceNames = [line.strip() for line in output if line.strip()]
     
     print("Available webcams:")
         
         # Loop through possible OpenCV sources (device IDs 0-9)
-    for idx, name in enumerate(device_names):
+    for idx, name in enumerate(deviceNames):
         print(f"Webcam source ID: {idx}, Name: {name}")
-        webcams.update({name : idx})
             # Check if OpenCV can access the device
         cap = cv2.VideoCapture(idx)
         if cap.isOpened():
             print(f"OpenCV can access webcam {idx}: {name}")
+            webcams.update({name : (idx, 1)})
             cap.release()
         else:
             print(f"OpenCV cannot access webcam {idx}: {name}")
+            webcams.update({name : (idx, 0)})
 
     print(webcams)
 
@@ -88,7 +98,7 @@ class YoloV1(tf.keras.Model):
 
 model = YoloV1()
 model.build((None, 448,448,3))
-model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
+model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5")
 """#load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,
@@ -116,9 +126,9 @@ class GUI(tk.Tk):
         self.maxFrameRate = 30
         self.updateInterval = 1000 // self.maxFrameRate  # Delay between frames in milliseconds
         self.webcamSource = DEFAULT_CAM_SOURCE
-        self.webcamOptions = list(webcams.keys())
+        self.webcamOptions = list(k for k, (v) in webcams.items() if v[1] != 0)
         self.webcamName = tk.StringVar()
-        self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
+        if len(self.webcamOptions) != 0: self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
 
 
     # function used for toggle button's command, is called when the button is pressed
@@ -150,6 +160,7 @@ class GUI(tk.Tk):
 
     # function used in the settings tab, opens a toplevel where you can control the confidence threshold (add more here asp)
     def openSettings(self):
+        #self.webcamDropdown = None
         self.settingsWindow = tk.Toplevel(self)
         self.settingsWindow.geometry("600x400")
         self.settingsWindow.title("Settings")
@@ -161,8 +172,15 @@ class GUI(tk.Tk):
         self.frameRateSlider.pack()
         self.webcamDropdownLabel = tk.Label(self.settingsWindow, text="Webcam Device:")
         self.webcamDropdownLabel.pack()
-        self.webcamDropdown = tk.OptionMenu(self.settingsWindow, self.webcamName, *self.webcamOptions)
-        self.webcamDropdown.pack()
+        print(len(webcams))
+        try:
+            self.webcamDropdown = tk.OptionMenu(self.settingsWindow, self.webcamName, self.webcamName, *self.webcamOptions)
+            self.webcamDropdown.pack()
+        except Exception as a:
+            print(f"No webcam detected. {a}")
+        if len(webcams) == 0:
+            self.webcamDropdown = tk.Label(self.settingsWindow, text="No webcam devices detected. Try reopening settings.", fg="red")
+            self.webcamDropdown.pack()
         self.applySettingsButton = tk.Button(self.settingsWindow, text="Apply Settings", command=self.applySettings)
         self.applySettingsButton.pack()
 
@@ -172,7 +190,7 @@ class GUI(tk.Tk):
     # function is used for the button in settings, it applies all settings
     def applySettings(self):
         self.threshold = self.thresholdSlider.get()
-        self.webcamSource = webcams.get(self.webcamName.get())
+        self.webcamSource = webcams.get(self.webcamName.get())[0]
         self.maxFrameRate = self.frameRateSlider.get()
         self.updateInterval = 1000 // self.maxFrameRate
         if self.currentFrame is not None:
@@ -306,6 +324,7 @@ def drawYoloBoxes(image, yoloPrediction, instance, s=7):
 
 if __name__ == "__main__":
     getWebcamDevices()
+    WEBCAM_DETECTION_THREAD.start()
     gui = GUI()
     gui.mainloop()
 # THIS WORKS FIGURE OUT WHY!!!!!!!!
