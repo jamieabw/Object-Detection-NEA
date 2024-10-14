@@ -1,5 +1,7 @@
 
 import tkinter as tk
+from tkinter import colorchooser
+from tkinter import messagebox
 from tkinter import filedialog
 from PIL import Image, ImageTk, ImageDraw
 import keras.regularizers
@@ -27,6 +29,7 @@ STRIDES = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2]
 l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
+DEFAULT_BBOX_WIDTH = 2
 
 
 
@@ -134,6 +137,7 @@ class GUI(tk.Tk):
         self.toggleLabel = tk.Label(self, text="Detection: Inactive", fg="red")
         self.toggleLabel.pack()
         self.bboxColour = DEFAULT_BBOX_COLOUR
+        self.bboxWidth = DEFAULT_BBOX_WIDTH
         self.currentFrame = None
         self.frameGenerator = None
         self.setupMenu()
@@ -171,10 +175,22 @@ class GUI(tk.Tk):
         self.menuBar.add_cascade(label="Settings", command=self.openSettings)
         self.config(menu=self.menuBar)
 
+    def changeColour(self):
+        self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
+        self.colourPicker.config(fg=self.tempColour)
+        
+
 
     # function used in the settings tab, opens a toplevel where you can control the confidence threshold (add more here asp)
     def openSettings(self):
+        try:
+            if self.settingsWindow.winfo_exists():
+                messagebox.showerror(title="Settings Error", message="Settings is already open in another window.")
+                return
+        except AttributeError:
+            pass
         #self.webcamDropdown = None
+        self.tempColour = self.bboxColour
         self.webcamOptions = list(webcamThreadHandler.webcams.keys())
         self.webcamName = tk.StringVar()
         if len(self.webcamOptions) != 0: self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
@@ -187,6 +203,11 @@ class GUI(tk.Tk):
         self.frameRateSlider = tk.Scale(self.settingsWindow, from_=1, to=60, resolution=1, orient="horizontal", label="Maximum Frame Rate:", length=135)
         self.frameRateSlider.set(self.maxFrameRate)
         self.frameRateSlider.pack()
+        self.widthSlider = tk.Scale(self.settingsWindow, from_=1, to=15, resolution=1, orient="horizontal", label="Bounding Box Width:", length=135)
+        self.widthSlider.set(self.bboxWidth)
+        self.widthSlider.pack()
+        self.colourPicker = tk.Button(self.settingsWindow, text="Change Bounding Box Colour", command=self.changeColour, fg=self.bboxColour)
+        self.colourPicker.pack()
         self.webcamDropdownLabel = tk.Label(self.settingsWindow, text="Webcam Device:")
         self.webcamDropdownLabel.pack()
         #print(len(webcamThreadHandler.webcams))
@@ -210,6 +231,9 @@ class GUI(tk.Tk):
         self.webcamSource = webcamThreadHandler.webcams.get(self.webcamName.get())
         self.maxFrameRate = self.frameRateSlider.get()
         self.updateInterval = 1000 // self.maxFrameRate
+        self.bboxColour = self.tempColour
+        self.bboxWidth = self.widthSlider.get()
+        print(self.bboxColour)
         if self.currentFrame is not None:
             self.displayCurrentFrame()
 
@@ -228,6 +252,9 @@ class GUI(tk.Tk):
 
     # function used for starting webcam footage
     def startDisplayWebcamFootage(self):
+        if len(webcamThreadHandler.webcams) == 0:
+            messagebox.showerror(title="Webcam Device Error", message="No webcam devices have been detected, please try again.")
+            return
         self.frameGenerator = None
         self.frameGenerator = yieldNextFrame(source=self.webcamSource)  # Initialize the generator for the webcam
         self.displayFootage()
@@ -313,11 +340,6 @@ def drawYoloBoxes(image, yoloPrediction, instance, s=7):
     cellHeight = imgHeight / s
     print(imgWidth, imgHeight)
 
-    """
-
-    TODO: CHANGE THIS CODE TO MINE AND ALSO MAKE IT WORK AS THE BOUNDING BOXES ARE NOT BEING GENERATED CORRECTLY
-    """
-
     # Loop through each grid cell
     output = yoloPrediction[0]
     for j in range(s):
@@ -334,7 +356,8 @@ def drawYoloBoxes(image, yoloPrediction, instance, s=7):
                 y2 = y + h
                 # print("DETECTION!") debugging statement
                     
-                draw.rectangle([x, y, x2, y2], outline=instance.bboxColour, width=2)
+                draw.rectangle([x, y, x2, y2], outline=instance.bboxColour, width=instance.bboxWidth)
+                draw.text([x2,y], text=f"Person: {output[i,j,0]:.2f}", fill=instance.bboxColour)
 
     return image
 
