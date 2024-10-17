@@ -31,13 +31,16 @@ DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
 
-
+"""
+IDEA FOR AN APPLICATION OF THE PROJECT: A TOOL TO HELP PEOPLE SIMPLY TRAIN OBJECT DETECTION MODELS, BASED OFF YOLO THEY CAN
+TRAIN MODELS WITH DIFFERENT HYPERPARAMERS (S, B, C VALS) SO THEY CAN DETECT WHATEVER THEY PLEASE, THEN HAVE POTENTIAL TO ADD A
+WINDOW FOR TRAINING A MODEL AND CAN IMPLEMENT A MAP THING AND LOSS GRAPHS
+"""
 
 """
-TODO: potential additions for settings: a colour picker to change the colour of bounding boxes, opacity too maybe
-an outline size for bounding boxes
-option to display confidence of the bounding box
+TODO:
 advanced options to import a model and change hyperparameters of YOLOv1 (S, B, C values)
+add a file to calculate mAP over time and plot it to display it to the user
 """
 
 
