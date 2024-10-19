@@ -99,7 +99,7 @@ class YoloV1(tf.keras.Model):
         return x
 
     
-model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
+"""model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
 model.build(input_shape=(None, 448, 448, 3))
 
 model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
@@ -108,8 +108,8 @@ model.summary()
 print(yTrain.shape)
 print(yTest.shape)
 # Load the weights
-model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\modelSave_epoch_20.h5")
-model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5") 
+model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5")
+#model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v4.h5")""" 
 
 
 
@@ -136,9 +136,9 @@ if __name__ == "__main__":
     print(yTrain.shape)
     print(yTest.shape)
     # Load the weights
-    model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
+    model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5")
     #model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
-    test()
+    train()
 
 
 
