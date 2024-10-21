@@ -17,6 +17,7 @@ import subprocess
 import cv2
 import threading
 import time
+import traceback
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
@@ -30,6 +31,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
+DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
 
 """
 IDEA FOR AN APPLICATION OF THE PROJECT: A TOOL TO HELP PEOPLE SIMPLY TRAIN OBJECT DETECTION MODELS, BASED OFF YOLO THEY CAN
@@ -115,9 +117,9 @@ class YoloV1(tf.keras.Model):
         x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
         return x
 
-model = YoloV1()
+"""model = YoloV1()
 model.build((None, 448,448,3))
-model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5")
+model.load_weights(DEFAULT_MODEL_PATH)"""
 """#load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
                                                                                           ,"boundingBoxLoss" : yoloLossPlaceholder,
                                                                                           "ClassLoss" : yoloLossPlaceholder,
@@ -133,6 +135,9 @@ class GUI(tk.Tk):
         self.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.imageLabel = tk.Label(self)
         self.imageLabel.pack()
+        self.model = YoloV1()
+        self.model.build((None, 448,448,3))
+        self.model.load_weights(DEFAULT_MODEL_PATH)
         self.detecting = False
         self.threshold = DEFAULT_THRESHOLD # if confidence > threshold then detection will display
         self.detectToggleButton = tk.Button(self, text="Toggle Detections", command=self.toggleDetection)
@@ -155,6 +160,9 @@ class GUI(tk.Tk):
     # function used for toggle button's command, is called when the button is pressed
     def toggleDetection(self):
         if self.detecting is False:
+            if self.model == None:
+                messagebox.showerror(title="Model Error", message="No model is currently loaded. Please load a model.")
+                return
             self.detecting = True
             self.toggleLabel.config(text="Detection: Active", fg="green")
         else:
@@ -176,11 +184,55 @@ class GUI(tk.Tk):
         self.fileMenu.add_cascade(label="Import Video", command=self.startDisplayVideo)
         self.fileMenu.add_cascade(label="Import Webcam Footage", command=self.startDisplayWebcamFootage)
         self.menuBar.add_cascade(label="Settings", command=self.openSettings)
+        self.menuBar.add_cascade(label="Train New Model", command=None)
         self.config(menu=self.menuBar)
 
     def changeColour(self):
         self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
         self.colourPicker.config(fg=self.tempColour)
+
+    def loadWeights(self):
+        self.model = None
+        self.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
+        self.model.build((None,448,448,3))
+        try:
+            weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
+            print(weights)
+            self.model.load_weights(weights.name.replace("\\","\\\\"))
+        except Exception as E:
+           
+            print(traceback.format_exc())
+            print(E)
+            return
+    
+        self.modelSettingsWindow.destroy()
+
+    def openModelSettings(self):
+        try:
+            if self.modelSettingsWindow.winfo_exists():
+                messagebox.showerror(title="Settings Error", message="Model settings is already open in another window.")
+                return
+        except AttributeError:
+            pass
+        self.detecting = False
+        self.toggleLabel.config(text="Detection: Inactive", fg="red")
+        self.modelSettingsWindow = tk.Toplevel(self.settingsWindow)
+        self.gridSizeInput = tk.Entry(self.modelSettingsWindow)
+        self.boundingBoxesInput = tk.Entry(self.modelSettingsWindow)
+        self.classCountInput = tk.Entry(self.modelSettingsWindow)
+        tk.Label(self.modelSettingsWindow, text="Grid Size:").pack()
+        self.gridSizeInput.pack()
+        tk.Label(self.modelSettingsWindow, text="Bounding Boxes:").pack()
+        self.boundingBoxesInput.pack()
+        tk.Label(self.modelSettingsWindow, text="Number Of Classes:").pack()
+        self.classCountInput.pack()
+        self.loadWeightsButton = tk.Button(self.modelSettingsWindow, text="Load Weights", command=self.loadWeights)
+
+        self.modelLoadWarningLabel = tk.Label(self.modelSettingsWindow,
+                                               text="Ensure you have entered the parameters BEFORE loading weights.",
+                                               fg="red")
+        self.loadWeightsButton.pack()
+        self.modelLoadWarningLabel.pack()
         
 
 
@@ -222,6 +274,8 @@ class GUI(tk.Tk):
         if len(webcamThreadHandler.webcams) == 0:
             self.webcamDropdown = tk.Label(self.settingsWindow, text="No webcam devices detected. Try reopening settings.", fg="red")
             self.webcamDropdown.pack()
+        self.changeModelSettings = tk.Button(self.settingsWindow, text="Model Settings", command=self.openModelSettings)
+        self.changeModelSettings.pack()
         self.applySettingsButton = tk.Button(self.settingsWindow, text="Apply Settings", command=self.applySettings)
         self.applySettingsButton.pack()
 
@@ -307,7 +361,7 @@ class GUI(tk.Tk):
         frame = self.currentFrame.copy()
         if self.detecting:
             self.modelInputImage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
-            frame = drawYoloBoxes(frame, model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self)
+            frame = drawYoloBoxes(frame, self.model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self)
         self.photo = ImageTk.PhotoImage(frame)
         self.imageLabel.config(image=self.photo)
         self.imageLabel.pack()
