@@ -18,6 +18,7 @@ import cv2
 import threading
 import time
 import traceback
+from training import ModelTraining
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
@@ -31,7 +32,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
-DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
+DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
 
 """
 IDEA FOR AN APPLICATION OF THE PROJECT: A TOOL TO HELP PEOPLE SIMPLY TRAIN OBJECT DETECTION MODELS, BASED OFF YOLO THEY CAN
@@ -65,25 +66,25 @@ class webcamThreadHandler:
             # Clean up the output and remove any empty lines
         deviceNames = [line.strip() for line in output if line.strip()]
         
-        print("Available webcams:")
+        #print("Available webcams:")
             
             # Loop through possible OpenCV sources (device IDs 0-9)
         for idx, name in enumerate(deviceNames):
-            print(f"Webcam source ID: {idx}, Name: {name}")
+            #print(f"Webcam source ID: {idx}, Name: {name}")
                 # Check if OpenCV can access the device
             cap = cv2.VideoCapture(idx)
             
             if cap.isOpened():
-                print(f"OpenCV can access webcam {idx}: {name}")
+                #print(f"OpenCV can access webcam {idx}: {name}")
                 cls.webcams.update({name : idx})
                 cap.release()
             else:
-                print(f"OpenCV cannot access webcam {idx}: {name}")
+                ##print(f"OpenCV cannot access webcam {idx}: {name}")
                 if name in list(cls.webcams.keys()):
                     del cls.webcams[name]
                 #webcams.update({name : (idx, 0)})
 
-        print(cls.webcams)
+        #print(cls.webcams)
 
 
 def getWebcamDevicesThreadHandler():
@@ -184,9 +185,68 @@ class GUI(tk.Tk):
         self.fileMenu.add_cascade(label="Import Video", command=self.startDisplayVideo)
         self.fileMenu.add_cascade(label="Import Webcam Footage", command=self.startDisplayWebcamFootage)
         self.menuBar.add_cascade(label="Settings", command=self.openSettings)
-        self.menuBar.add_cascade(label="Train New Model", command=None)
+        self.menuBar.add_cascade(label="Train New Model", command=self.openModelTrainer)
         self.config(menu=self.menuBar)
 
+    def selectTrainingData(self):
+        try:
+            self.trainingDir = filedialog.askdirectory(title="Select Training Folder:")
+        except Exception:
+            return
+        self.trainingDataInputButtonLabel.config(text=f"Currently Selected: {self.trainingDir}")
+
+
+    def selectOutputFolder(self):
+        try:
+            self.outputDir = filedialog.askdirectory(title="Select Training Annotations Folder:")
+        except Exception:
+            return
+        self.outputDirectorySelectionButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
+        
+
+    def openModelTrainer(self):
+        try:
+            if self.modelTrainer.winfo_exists():
+                messagebox.showerror(title="Trainer Error", message="Model trainer is already open in another window.")
+                return
+        except AttributeError:
+            pass
+        self.modelTrainer = tk.Toplevel(self)
+        self.trainingDir = None
+        self.outputDir = None
+        self.trainingGridSizeInput = tk.Entry(self.modelTrainer)
+        self.trainingBoundingBoxesInput = tk.Entry(self.modelTrainer)
+        self.trainingClassCountInput = tk.Entry(self.modelTrainer)
+        tk.Label(self.modelTrainer, text="Grid Size:").pack()
+        self.trainingGridSizeInput.pack()
+        tk.Label(self.modelTrainer, text="Bounding Boxes:").pack()
+        self.trainingBoundingBoxesInput.pack()
+        tk.Label(self.modelTrainer, text="Number Of Classes:").pack()
+        self.trainingClassCountInput.pack()
+        tk.Label(self.modelTrainer, text="Input number of epochs:").pack()
+        self.epochsInput = tk.Entry(self.modelTrainer)
+        self.epochsInput.pack()
+        tk.Label(self.modelTrainer, text="Input Learning rate:").pack()
+        self.learningRateInput = tk.Entry(self.modelTrainer)
+        self.learningRateInput.pack()
+        tk.Label(self.modelTrainer, text="Input Batch Size:").pack()
+        self.batchSizeInput = tk.Entry(self.modelTrainer)
+        self.batchSizeInput.pack()
+        self.trainingDataInputButton = tk.Button(self.modelTrainer, text="Input Training Folder", command=self.selectTrainingData)
+        self.trainingDataInputButtonLabel = tk.Label(self.modelTrainer, text="Currently Selected: None")
+        self.trainingDataInputButton.pack()
+        self.trainingDataInputButtonLabel.pack()
+        self.beginTrainingButton = tk.Button(self.modelTrainer, text="Begin Training", command=self.beginTraining)
+        self.beginTrainingButton.pack()
+
+    def beginTraining(self):
+        self.trainer = ModelTraining(YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get())),
+                                     int(self.epochsInput.get()), int(self.batchSizeInput.get()), float(self.learningRateInput.get()), self.trainingDir,
+                                     int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir)
+        self.trainer.train()
+        
+        
+        
     def changeColour(self):
         self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
         self.colourPicker.config(fg=self.tempColour)
@@ -195,14 +255,14 @@ class GUI(tk.Tk):
         self.model = None
         self.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
         self.model.build((None,448,448,3))
+        weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
+        print(weights)
         try:
-            weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
-            print(weights)
             self.model.load_weights(weights.name.replace("\\","\\\\"))
-        except Exception as E:
-           
-            print(traceback.format_exc())
-            print(E)
+        except ValueError:
+            messagebox.showerror(title="Incompatible Weights",
+                                      message="The weights do not correctly match the layers based on the parameters provided. Ensure parameters are correct and retry.")
+            self.model = None
             return
     
         self.modelSettingsWindow.destroy()
