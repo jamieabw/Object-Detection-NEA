@@ -18,9 +18,30 @@ graphs of the various infomation of the training process aswell as displaying th
 
 
 
+class TrainingInfoHandler(tf.keras.callbacks.Callback):
+    def __init__(self, guiInstance):
+        super().__init__()
+        self.currentEpoch = 0
+        self.yoloLoss = None
+        self.bboxLoss = None
+        self.classLoss = None
+        self.confidenceLoss = None
+        self.guiInstance = guiInstance
 
+    def on_batch_end(self, batch, logs=None):
+        if logs is not None:
+            self.currentEpoch += 1
+            self.yoloLoss = round(logs.get('loss'), 3)
+            self.confidenceLoss = round(logs.get('ConfidenceLoss'), 3)
+            self.classLoss = round(logs.get('ClassLoss'), 3)
+            self.bboxLoss = round(logs.get('boundingBoxLoss'), 3)
+            self.testSet()
+            
+    def testSet(self):
+        self.guiInstance.outputButtonLabel.config(text=f"loss: {self.yoloLoss} bbox loss: {self.bboxLoss} class loss: {self.classLoss} confidence loss: {self.confidenceLoss}")
+            
 class ModelTraining:
-    def __init__(self, model, epochs, batchSize, learningRate, trainingDir, S, B, C, outputDir):
+    def __init__(self, model, epochs, batchSize, learningRate, trainingDir, S, B, C, outputDir, guiInstance):
         self.model = model
         self.epochs = epochs
         self.batchSize = batchSize
@@ -37,6 +58,7 @@ class ModelTraining:
     save_freq="epoch",
     verbose=1
 )
+        self.guiInstance = guiInstance
         self.model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=self.learningRate, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
         
     def encodeLabels(self,textFileDir):
@@ -155,7 +177,7 @@ class ModelTraining:
     def train(self):
         self.model.fit(self.dataGenerator(),
                         epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
-                          callbacks=[self.checkpoint])
+                          callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
         
 
 def convertToArray(imagePath, size=(448,448)):

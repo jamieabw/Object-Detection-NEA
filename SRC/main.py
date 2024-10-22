@@ -201,7 +201,7 @@ class GUI(tk.Tk):
             self.outputDir = filedialog.askdirectory(title="Select Training Annotations Folder:")
         except Exception:
             return
-        self.outputDirectorySelectionButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
+        self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
         
 
     def openModelTrainer(self):
@@ -236,14 +236,20 @@ class GUI(tk.Tk):
         self.trainingDataInputButtonLabel = tk.Label(self.modelTrainer, text="Currently Selected: None")
         self.trainingDataInputButton.pack()
         self.trainingDataInputButtonLabel.pack()
+        self.outputButton = tk.Button(self.modelTrainer, text="Input Output Folder", command=self.selectOutputFolder)
+        self.outputButtonLabel = tk.Label(self.modelTrainer, text="Currently Selected: None")
+        self.outputButton.pack()
+        self.outputButtonLabel.pack()
         self.beginTrainingButton = tk.Button(self.modelTrainer, text="Begin Training", command=self.beginTraining)
         self.beginTrainingButton.pack()
 
     def beginTraining(self):
         self.trainer = ModelTraining(YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get())),
                                      int(self.epochsInput.get()), int(self.batchSizeInput.get()), float(self.learningRateInput.get()), self.trainingDir,
-                                     int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir)
-        self.trainer.train()
+                                     int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir, self)
+        modelTrainingThread = threading.Thread(target=self.trainer.train) #
+        modelTrainingThread.start()
+        #self.trainer.train()
         
         
         
