@@ -32,7 +32,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
-DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
+DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
 
 """
 IDEA FOR AN APPLICATION OF THE PROJECT: A TOOL TO HELP PEOPLE SIMPLY TRAIN OBJECT DETECTION MODELS, BASED OFF YOLO THEY CAN
@@ -152,6 +152,7 @@ class GUI(tk.Tk):
         self.setupMenu()
         self.maxFrameRate = 30
         self.updateInterval = 1000 // self.maxFrameRate  # Delay between frames in milliseconds
+        self.classes = "person"
         self.webcamSource = DEFAULT_CAM_SOURCE
         self.webcamOptions = list(webcamThreadHandler.webcams.keys())
         self.webcamName = tk.StringVar()
@@ -202,6 +203,17 @@ class GUI(tk.Tk):
         except Exception:
             return
         self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
+
+
+    def openInfoWindow(self):
+        self.infoWindow = tk.Toplevel(self.modelTrainer)
+        self.epoch = 0
+        self.totalEpochs = 1 # default
+        self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None
+        self.lossLabel = tk.Label(self.infoWindow, text=f"Current Loss: N/A")
+        self.classLossLabel = tk.Label(self.infoWindow, text=f"Current Class Loss: N/A")
+        self.confidenceLossLabel = tk.Label(self.infoWindow, text=f"Current Confidence Loss: N/A")
+        self.boundingBoxLossLabel = tk.Label(self.infoWindow, text=f"Current Bounding Box Loss: N/A")
         
 
     def openModelTrainer(self):
@@ -249,6 +261,7 @@ class GUI(tk.Tk):
                                      int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir, self)
         modelTrainingThread = threading.Thread(target=self.trainer.train) #
         modelTrainingThread.start()
+        self.openInfoWindow()
         #self.trainer.train()
         
         
@@ -261,6 +274,7 @@ class GUI(tk.Tk):
         self.model = None
         self.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
         self.model.build((None,448,448,3))
+        self.classes = self.classesInput.get()
         weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
         print(weights)
         try:
@@ -286,12 +300,15 @@ class GUI(tk.Tk):
         self.gridSizeInput = tk.Entry(self.modelSettingsWindow)
         self.boundingBoxesInput = tk.Entry(self.modelSettingsWindow)
         self.classCountInput = tk.Entry(self.modelSettingsWindow)
+        self.classesInput = tk.Entry(self.modelSettingsWindow)
         tk.Label(self.modelSettingsWindow, text="Grid Size:").pack()
         self.gridSizeInput.pack()
         tk.Label(self.modelSettingsWindow, text="Bounding Boxes:").pack()
         self.boundingBoxesInput.pack()
         tk.Label(self.modelSettingsWindow, text="Number Of Classes:").pack()
         self.classCountInput.pack()
+        tk.Label(self.modelSettingsWindow, text="Class Names:").pack()
+        self.classesInput.pack()
         self.loadWeightsButton = tk.Button(self.modelSettingsWindow, text="Load Weights", command=self.loadWeights)
 
         self.modelLoadWarningLabel = tk.Label(self.modelSettingsWindow,
@@ -427,60 +444,75 @@ class GUI(tk.Tk):
         frame = self.currentFrame.copy()
         if self.detecting:
             self.modelInputImage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
-            frame = drawYoloBoxes(frame, self.model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self)
+            frame = drawYoloBoxes(frame, self.model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self, self.classes)
         self.photo = ImageTk.PhotoImage(frame)
         self.imageLabel.config(image=self.photo)
         self.imageLabel.pack()
 
 
-from PIL import Image, ImageDraw
-import numpy as np
 
 
 # draws the bounding boxes based on the models prediction
-def drawYoloBoxes(image, yoloPrediction, instance, s=7):
+def drawYoloBoxes(image, yoloPrediction, instance, classes="hawk tuah"):
     """
     Draw bounding boxes on the image based on YOLOv1 predictions.
-    
+
     Args:
         image (PIL.Image): The original image.
-        yolo_prediction (numpy.array): The YOLOv1 prediction with shape (1, s, s, 6).
-            Each grid cell contains [confidence, x_center, y_center, w, h, classes].
-        instance (GUI object): will draw the box on the correct window
-        s (int): The number of grid cells in one dimension (default is 7 for YOLOv1).
-    
+        yoloPrediction (numpy.array): The YOLOv1 prediction with shape (1, s, s, 5*b + num_classes).
+            Each grid cell contains `b` bounding boxes, each with [confidence, x_center, y_center, w, h],
+            and class probabilities following the bounding boxes.
+        instance (GUI object): Instance with model and settings for drawing bounding boxes.
+
     Returns:
         PIL.Image: The image with drawn bounding boxes.
     """
-    # Convert the image to an editable format
+    # Get grid size and number of bounding boxes per grid cell
+    s = instance.model.grid_size  # grid size (e.g., 7x7)
+    b = instance.model.bboxes  # number of bounding boxes per grid cell (e.g., 2) 
+    classes = classes.split(",")
+    numOfClasses = len(classes)
+    
+    # Create a drawing context for the image
     draw = ImageDraw.Draw(image)
     
     # Image dimensions
     imgWidth, imgHeight = image.size
-    
+
     # Grid cell size
     cellWidth = imgWidth / s
     cellHeight = imgHeight / s
-    print(imgWidth, imgHeight)
+
+    # YOLOv1 prediction output format: (1, s, s, 5*b + num_classes)
+    output = yoloPrediction[0]
 
     # Loop through each grid cell
-    output = yoloPrediction[0]
-    for j in range(s):
-        for i in range(s):
-            # Extract the bounding box data for the current grid cell
-             # Ensure the shape is correct
-                
-            if output[i, j, 0] > instance.threshold:  # Draw only if confidence is above a threshold
-                w = cellWidth * output[i, j, 3]
-                h = cellHeight * output[i, j, 4]
-                x = (i * cellWidth) + (cellWidth * output[i, j, 1]) - ((w)/2)
-                y = (j * cellHeight) + (cellHeight * output[i, j, 2]) - ((h)/2)
-                x2 = x + w
-                y2 = y + h
-                # print("DETECTION!") debugging statement
-                    
-                draw.rectangle([x, y, x2, y2], outline=instance.bboxColour, width=instance.bboxWidth)
-                draw.text([x2,y], text=f"Person: {output[i,j,0]:.2f}", fill=instance.bboxColour)
+    for j in range(s):  # Iterate over the rows of grid cells
+        for i in range(s):  # Iterate over the columns of grid cells
+            for box in range(b):  # Iterate over each bounding box in the current grid cell
+                # Extract confidence and bounding box details for this box
+                confidence = output[i, j, box * 5]
+                if confidence > instance.threshold:  # Draw only if confidence is above the threshold
+                    xCentre = output[i, j, box * 5 + 1]
+                    yCentre = output[i, j, box * 5 + 2]
+                    box_w = output[i, j, box * 5 + 3]
+                    box_h = output[i, j, box * 5 + 4]
+
+                    # Convert normalized bounding box coordinates to image coordinates
+                    w = cellWidth * box_w
+                    h = cellHeight * box_h
+                    x = (i * cellWidth) + (cellWidth * xCentre) - (w / 2)
+                    y = (j * cellHeight) + (cellHeight * yCentre) - (h / 2)
+                    x2 = x + w
+                    y2 = y + h
+                    classProbs = output[i, j, 5 * b:]  # Access class probabilities after all bounding boxes
+                    classIndex = classProbs.argmax()  # Get the index of the class with the highest probability
+
+                    # Draw the bounding box
+                    draw.rectangle([x, y, x2, y2], outline=instance.bboxColour, width=instance.bboxWidth)
+
+                    # Draw class label and confidence score (assuming a single class for simplicity)
+                    draw.text([x2, y], text=f"{classes[classIndex]}: {confidence:.2f}", fill=instance.bboxColour)
 
     return image
 
