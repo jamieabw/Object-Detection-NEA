@@ -35,17 +35,18 @@ DEFAULT_BBOX_WIDTH = 2
 DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
 
 """
-IDEA FOR AN APPLICATION OF THE PROJECT: A TOOL TO HELP PEOPLE SIMPLY TRAIN OBJECT DETECTION MODELS, BASED OFF YOLO THEY CAN
-TRAIN MODELS WITH DIFFERENT HYPERPARAMERS (S, B, C VALS) SO THEY CAN DETECT WHATEVER THEY PLEASE, THEN HAVE POTENTIAL TO ADD A
-WINDOW FOR TRAINING A MODEL AND CAN IMPLEMENT A MAP THING AND LOSS GRAPHS
-"""
-
-"""
 TODO:
-advanced options to import a model and change hyperparameters of YOLOv1 (S, B, C values)
-add a file to calculate mAP over time and plot it to display it to the user
+- add a function to calculate mAP
+- add a window which displays statistical info about the training process, include: losses, mAP, epoch number, maybe a preview window
+which displays the results of running the model on a unique not seen before image after each epoch
+- fix the model so it can accept multiple bounding boxes
+- add the choice of a penalising l2 regulariser
+- add support to use different GPUs for training
+- add a debug menu (this could display, current FPS)
+- train a model to sufficiently and effectively make detections on multiple objects
+- ensure all functions are made by ME, ensure all AI generations and support from websites is eliminated
+- sufficiently comment the code so a third party programmers understands why specific implementations are how they are
 """
-
 
 # a place holder function used when loading an ENTIRE MODEL AND NOT ONLY WEIGHTS
 # this is no longer applicable due to the use of subclassing in a model which 
