@@ -10,6 +10,10 @@ FIX THIS ITS VERY BROKEN, IM NOT SURE WHAT IS CAUSING IT PROBABLY TRY WITH ACTUA
 ITS ME OR THIS SHITTY SUBROUTINE
 """
 
+def getmAP():
+    for prediciton in predictions:
+        calculatemAP(prediciton)
+
 def calculatemAP(predictions, truth):
     TP = 0
     FP = 0
