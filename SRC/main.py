@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import colorchooser
 from tkinter import messagebox
 from tkinter import filedialog
+from tkinter import ttk
 from PIL import Image, ImageTk, ImageDraw
 import keras.regularizers
 from videoHandler import yieldNextFrame, readImage
@@ -32,7 +33,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
-DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
+DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
 
 """
 TODO:
@@ -70,6 +71,8 @@ class webcamThreadHandler:
         #print("Available webcams:")
             
             # Loop through possible OpenCV sources (device IDs 0-9)
+        if len(deviceNames) == 0:
+            cls.webcams.clear()
         for idx, name in enumerate(deviceNames):
             #print(f"Webcam source ID: {idx}, Name: {name}")
                 # Check if OpenCV can access the device
@@ -79,13 +82,16 @@ class webcamThreadHandler:
                 #print(f"OpenCV can access webcam {idx}: {name}")
                 cls.webcams.update({name : idx})
                 cap.release()
+                print("YES")
             else:
                 ##print(f"OpenCV cannot access webcam {idx}: {name}")
+                print("no")
                 if name in list(cls.webcams.keys()):
                     del cls.webcams[name]
+                print(cls.webcams)
                 #webcams.update({name : (idx, 0)})
 
-        #print(cls.webcams)
+        #
 
 
 def getWebcamDevicesThreadHandler():
@@ -206,16 +212,25 @@ class GUI(tk.Tk):
         self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
 
 
-    def openInfoWindow(self):
+    def openInfoWindow(self, totalEpochs):
         self.infoWindow = tk.Toplevel(self.modelTrainer)
-        self.epoch = 0
-        self.totalEpochs = 1 # default
-        self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None
+        #self.epoch = 0
+        self.totalEpochs = totalEpochs #1 # default
+        self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None, None,  None, None
         self.lossLabel = tk.Label(self.infoWindow, text=f"Current Loss: N/A")
         self.classLossLabel = tk.Label(self.infoWindow, text=f"Current Class Loss: N/A")
         self.confidenceLossLabel = tk.Label(self.infoWindow, text=f"Current Confidence Loss: N/A")
         self.boundingBoxLossLabel = tk.Label(self.infoWindow, text=f"Current Bounding Box Loss: N/A")
-        
+        self.epochProgressBar = ttk.Progressbar(self.infoWindow, orient="horizontal", length=200, mode="determinate")
+        self.trainingProgressBar = ttk.Progressbar(self.infoWindow, orient="horizontal", length=200, mode="determinate")
+        self.lossLabel.pack()
+        self.classLossLabel.pack()
+        self.confidenceLossLabel.pack()
+        self.boundingBoxLossLabel.pack()
+        tk.Label(self.infoWindow, text="Current Epoch Progress:").pack()
+        self.epochProgressBar.pack()
+        tk.Label(self.infoWindow, text="Current Training Progress:").pack()
+        self.trainingProgressBar.pack()
 
     def openModelTrainer(self):
         try:
@@ -257,12 +272,12 @@ class GUI(tk.Tk):
         self.beginTrainingButton.pack()
 
     def beginTraining(self):
+        self.openInfoWindow(int(self.epochsInput.get()))
         self.trainer = ModelTraining(YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get())),
                                      int(self.epochsInput.get()), int(self.batchSizeInput.get()), float(self.learningRateInput.get()), self.trainingDir,
                                      int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir, self)
         modelTrainingThread = threading.Thread(target=self.trainer.train) #
         modelTrainingThread.start()
-        self.openInfoWindow()
         #self.trainer.train()
         
         

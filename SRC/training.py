@@ -6,7 +6,7 @@ import numpy as np
 import os
 from math import floor
 from model.loss import boundingBoxLoss, ClassLoss, ConfidenceLoss, yoloLoss
-GPU = not True
+GPU = True
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
     tf.config.experimental.set_memory_growth(physicalDevices[0], True)
@@ -35,10 +35,25 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
             self.confidenceLoss = round(logs.get('ConfidenceLoss'), 3)
             self.classLoss = round(logs.get('ClassLoss'), 3)
             self.bboxLoss = round(logs.get('boundingBoxLoss'), 3)
-            self.testSet()
-            
-    def testSet(self):
-        self.guiInstance.outputButtonLabel.config(text=f"loss: {self.yoloLoss} bbox loss: {self.bboxLoss} class loss: {self.classLoss} confidence loss: {self.confidenceLoss}")
+            self.setLossVals()
+            self.updateEpochProgress(batch)
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.updateTrainingProgress()
+
+
+    def updateEpochProgress(self, currentStep):
+        totalSteps = self.params.get("steps")
+        self.guiInstance.epochProgressBar["value"] = (currentStep / totalSteps) * 100
+
+    def updateTrainingProgress(self):
+        self.guiInstance.trainingProgressBar["value"] = (self.currentEpoch / self.guiInstance.totalEpochs) * 100
+
+    def setLossVals(self):
+        self.guiInstance.lossLabel.config(text=f"Current Overall Weighted Loss: {self.yoloLoss}")
+        self.guiInstance.classLossLabel.config(text=f"Current Class Loss: {self.classLoss}")
+        self.guiInstance.confidenceLossLabel.config(text=f"Current Confidence Loss: {self.confidenceLoss}")
+        self.guiInstance.boundingBoxLossLabel.config(text=f"Current Bounding Box Loss: {self.bboxLoss}")
             
 class ModelTraining:
     def __init__(self, model, epochs, batchSize, learningRate, trainingDir, S, B, C, outputDir, guiInstance):
