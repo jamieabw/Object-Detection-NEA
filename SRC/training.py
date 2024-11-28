@@ -6,7 +6,7 @@ import numpy as np
 import os
 from math import floor
 from model.loss import boundingBoxLoss, ClassLoss, ConfidenceLoss, yoloLoss
-GPU = True
+GPU = not True
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
     tf.config.experimental.set_memory_growth(physicalDevices[0], True)
