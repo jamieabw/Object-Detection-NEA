@@ -33,7 +33,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
-DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
+DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
 
 """
 TODO:
@@ -108,7 +108,6 @@ class YoloV1(tf.keras.Model):
     def __init__(self, grid_size=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
         super(YoloV1, self).__init__()
         self.grid_size = grid_size
-        
         self.classes = classes
         self.bboxes = bboxes
         self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES, l2Regularizer)
@@ -164,6 +163,10 @@ class GUI(tk.Tk):
         self.webcamOptions = list(webcamThreadHandler.webcams.keys())
         self.webcamName = tk.StringVar()
         if len(self.webcamOptions) != 0: self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
+        self.currentSettingsWindow = None
+        self.currentModelTrainer = None
+        self.currentModelSettingsWindow = None
+
 
 
     # function used for toggle button's command, is called when the button is pressed
@@ -196,203 +199,27 @@ class GUI(tk.Tk):
         self.menuBar.add_cascade(label="Train New Model", command=self.openModelTrainer)
         self.config(menu=self.menuBar)
 
-    def selectTrainingData(self):
-        try:
-            self.trainingDir = filedialog.askdirectory(title="Select Training Folder:")
-        except Exception:
-            return
-        self.trainingDataInputButtonLabel.config(text=f"Currently Selected: {self.trainingDir}")
 
+    def windowCheck(self, window):
+        if window is not None and window.winfo_exists():
+            messagebox.showerror(title="Window Already Open.", message="Window is already open. Please close before reopening.")
+            return False
+        return True
 
-    def selectOutputFolder(self):
-        try:
-            self.outputDir = filedialog.askdirectory(title="Select Training Annotations Folder:")
-        except Exception:
-            return
-        self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
-
-
-    def openInfoWindow(self, totalEpochs):
-        self.infoWindow = tk.Toplevel(self.modelTrainer)
-        #self.epoch = 0
-        self.totalEpochs = totalEpochs #1 # default
-        self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None, None,  None, None
-        self.lossLabel = tk.Label(self.infoWindow, text=f"Current Loss: N/A")
-        self.classLossLabel = tk.Label(self.infoWindow, text=f"Current Class Loss: N/A")
-        self.confidenceLossLabel = tk.Label(self.infoWindow, text=f"Current Confidence Loss: N/A")
-        self.boundingBoxLossLabel = tk.Label(self.infoWindow, text=f"Current Bounding Box Loss: N/A")
-        self.epochProgressBar = ttk.Progressbar(self.infoWindow, orient="horizontal", length=200, mode="determinate")
-        self.trainingProgressBar = ttk.Progressbar(self.infoWindow, orient="horizontal", length=200, mode="determinate")
-        self.lossLabel.pack()
-        self.classLossLabel.pack()
-        self.confidenceLossLabel.pack()
-        self.boundingBoxLossLabel.pack()
-        tk.Label(self.infoWindow, text="Current Epoch Progress:").pack()
-        self.epochProgressBar.pack()
-        tk.Label(self.infoWindow, text="Current Training Progress:").pack()
-        self.trainingProgressBar.pack()
-
-    def openModelTrainer(self):
-        try:
-            if self.modelTrainer.winfo_exists():
-                messagebox.showerror(title="Trainer Error", message="Model trainer is already open in another window.")
-                return
-        except AttributeError:
-            pass
-        self.modelTrainer = tk.Toplevel(self)
-        self.trainingDir = None
-        self.outputDir = None
-        self.trainingGridSizeInput = tk.Entry(self.modelTrainer)
-        self.trainingBoundingBoxesInput = tk.Entry(self.modelTrainer)
-        self.trainingClassCountInput = tk.Entry(self.modelTrainer)
-        tk.Label(self.modelTrainer, text="Grid Size:").pack()
-        self.trainingGridSizeInput.pack()
-        tk.Label(self.modelTrainer, text="Bounding Boxes:").pack()
-        self.trainingBoundingBoxesInput.pack()
-        tk.Label(self.modelTrainer, text="Number Of Classes:").pack()
-        self.trainingClassCountInput.pack()
-        tk.Label(self.modelTrainer, text="Input number of epochs:").pack()
-        self.epochsInput = tk.Entry(self.modelTrainer)
-        self.epochsInput.pack()
-        tk.Label(self.modelTrainer, text="Input Learning rate:").pack()
-        self.learningRateInput = tk.Entry(self.modelTrainer)
-        self.learningRateInput.pack()
-        tk.Label(self.modelTrainer, text="Input Batch Size:").pack()
-        self.batchSizeInput = tk.Entry(self.modelTrainer)
-        self.batchSizeInput.pack()
-        self.trainingDataInputButton = tk.Button(self.modelTrainer, text="Input Training Folder", command=self.selectTrainingData)
-        self.trainingDataInputButtonLabel = tk.Label(self.modelTrainer, text="Currently Selected: None")
-        self.trainingDataInputButton.pack()
-        self.trainingDataInputButtonLabel.pack()
-        self.outputButton = tk.Button(self.modelTrainer, text="Input Output Folder", command=self.selectOutputFolder)
-        self.outputButtonLabel = tk.Label(self.modelTrainer, text="Currently Selected: None")
-        self.outputButton.pack()
-        self.outputButtonLabel.pack()
-        self.beginTrainingButton = tk.Button(self.modelTrainer, text="Begin Training", command=self.beginTraining)
-        self.beginTrainingButton.pack()
-
-    def beginTraining(self):
-        self.openInfoWindow(int(self.epochsInput.get()))
-        self.trainer = ModelTraining(YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get())),
-                                     int(self.epochsInput.get()), int(self.batchSizeInput.get()), float(self.learningRateInput.get()), self.trainingDir,
-                                     int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir, self)
-        modelTrainingThread = threading.Thread(target=self.trainer.train) #
-        modelTrainingThread.start()
-        #self.trainer.train()
-        
-        
-        
-    def changeColour(self):
-        self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
-        self.colourPicker.config(fg=self.tempColour)
-
-    def loadWeights(self):
-        self.model = None
-        self.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
-        self.model.build((None,448,448,3))
-        self.classes = self.classesInput.get()
-        weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
-        print(weights)
-        try:
-            self.model.load_weights(weights.name.replace("\\","\\\\"))
-        except ValueError:
-            messagebox.showerror(title="Incompatible Weights",
-                                      message="The weights do not correctly match the layers based on the parameters provided. Ensure parameters are correct and retry.")
-            self.model = None
-            return
-    
-        self.modelSettingsWindow.destroy()
+    def openSettings(self):
+        if self.windowCheck(self.currentSettingsWindow):
+            self.currentSettingsWindow = Settings(self)
 
     def openModelSettings(self):
-        try:
-            if self.modelSettingsWindow.winfo_exists():
-                messagebox.showerror(title="Settings Error", message="Model settings is already open in another window.")
-                return
-        except AttributeError:
-            pass
-        self.detecting = False
-        self.toggleLabel.config(text="Detection: Inactive", fg="red")
-        self.modelSettingsWindow = tk.Toplevel(self.settingsWindow)
-        self.gridSizeInput = tk.Entry(self.modelSettingsWindow)
-        self.boundingBoxesInput = tk.Entry(self.modelSettingsWindow)
-        self.classCountInput = tk.Entry(self.modelSettingsWindow)
-        self.classesInput = tk.Entry(self.modelSettingsWindow)
-        tk.Label(self.modelSettingsWindow, text="Grid Size:").pack()
-        self.gridSizeInput.pack()
-        tk.Label(self.modelSettingsWindow, text="Bounding Boxes:").pack()
-        self.boundingBoxesInput.pack()
-        tk.Label(self.modelSettingsWindow, text="Number Of Classes:").pack()
-        self.classCountInput.pack()
-        tk.Label(self.modelSettingsWindow, text="Class Names:").pack()
-        self.classesInput.pack()
-        self.loadWeightsButton = tk.Button(self.modelSettingsWindow, text="Load Weights", command=self.loadWeights)
+        if self.windowCheck(self.currentModelSettingsWindow):
+            self.currentModelSettingsWindow = ModelSettings(self)
+    
+    def updateLossGraph(self):
+        ...
 
-        self.modelLoadWarningLabel = tk.Label(self.modelSettingsWindow,
-                                               text="Ensure you have entered the parameters BEFORE loading weights.",
-                                               fg="red")
-        self.loadWeightsButton.pack()
-        self.modelLoadWarningLabel.pack()
-        
-
-
-    # function used in the settings tab, opens a toplevel where you can control the confidence threshold (add more here asp)
-    def openSettings(self):
-        try:
-            if self.settingsWindow.winfo_exists():
-                messagebox.showerror(title="Settings Error", message="Settings is already open in another window.")
-                return
-        except AttributeError:
-            pass
-        #self.webcamDropdown = None
-        self.tempColour = self.bboxColour
-        self.webcamOptions = list(webcamThreadHandler.webcams.keys())
-        self.webcamName = tk.StringVar()
-        if len(self.webcamOptions) != 0: self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
-        self.settingsWindow = tk.Toplevel(self)
-        self.settingsWindow.geometry("600x400")
-        self.settingsWindow.title("Settings")
-        self.thresholdSlider = tk.Scale(self.settingsWindow, from_=0, to=1.0, resolution=0.005, orient="horizontal", label="Confidence Threshold:", length=135)
-        self.thresholdSlider.set(self.threshold)
-        self.thresholdSlider.pack()
-        self.frameRateSlider = tk.Scale(self.settingsWindow, from_=1, to=60, resolution=1, orient="horizontal", label="Maximum Frame Rate:", length=135)
-        self.frameRateSlider.set(self.maxFrameRate)
-        self.frameRateSlider.pack()
-        self.widthSlider = tk.Scale(self.settingsWindow, from_=1, to=15, resolution=1, orient="horizontal", label="Bounding Box Width:", length=135)
-        self.widthSlider.set(self.bboxWidth)
-        self.widthSlider.pack()
-        self.colourPicker = tk.Button(self.settingsWindow, text="Change Bounding Box Colour", command=self.changeColour, fg=self.bboxColour)
-        self.colourPicker.pack()
-        self.webcamDropdownLabel = tk.Label(self.settingsWindow, text="Webcam Device:")
-        self.webcamDropdownLabel.pack()
-        #print(len(webcamThreadHandler.webcams))
-        try:
-            self.webcamDropdown = tk.OptionMenu(self.settingsWindow, self.webcamName, *self.webcamOptions)
-            self.webcamDropdown.pack()
-        except Exception as a:
-            ...
-        if len(webcamThreadHandler.webcams) == 0:
-            self.webcamDropdown = tk.Label(self.settingsWindow, text="No webcam devices detected. Try reopening settings.", fg="red")
-            self.webcamDropdown.pack()
-        self.changeModelSettings = tk.Button(self.settingsWindow, text="Model Settings", command=self.openModelSettings)
-        self.changeModelSettings.pack()
-        self.applySettingsButton = tk.Button(self.settingsWindow, text="Apply Settings", command=self.applySettings)
-        self.applySettingsButton.pack()
-
-        
-
-
-    # function is used for the button in settings, it applies all settings
-    def applySettings(self):
-        self.threshold = self.thresholdSlider.get()
-        self.webcamSource = webcamThreadHandler.webcams.get(self.webcamName.get())
-        self.maxFrameRate = self.frameRateSlider.get()
-        self.updateInterval = 1000 // self.maxFrameRate
-        self.bboxColour = self.tempColour
-        self.bboxWidth = self.widthSlider.get()
-        print(self.bboxColour)
-        if self.currentFrame is not None:
-            self.displayCurrentFrame()
-
+    def openModelTrainer(self):
+        if self.windowCheck(self.currentModelTrainer):
+            self.currentModelTrainer = ModelTrainer(self)
 
     # function used for when importing a video
     def startDisplayVideo(self):
@@ -531,6 +358,191 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="hawk tuah"):
                     draw.text([x2, y], text=f"{classes[classIndex]}: {confidence:.2f}", fill=instance.bboxColour)
 
     return image
+
+class Settings(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master = master
+        self.title("Settings")
+        self.tempColour = self.master.bboxColour
+        self.webcamOptions = list(webcamThreadHandler.webcams.keys())
+        self.webcamName = tk.StringVar()
+        if len(self.webcamOptions) != 0: self.webcamName.set(self.webcamOptions[DEFAULT_CAM_SOURCE])
+        self.thresholdSlider = tk.Scale(self, from_=0, to=1.0, resolution=0.005, orient="horizontal", label="Confidence Threshold:", length=135)
+        self.thresholdSlider.set(self.master.threshold)
+        self.thresholdSlider.pack()
+        self.frameRateSlider = tk.Scale(self, from_=1, to=60, resolution=1, orient="horizontal", label="Maximum Frame Rate:", length=135)
+        self.frameRateSlider.set(self.master.maxFrameRate)
+        self.frameRateSlider.pack()
+        self.widthSlider = tk.Scale(self, from_=1, to=15, resolution=1, orient="horizontal", label="Bounding Box Width:", length=135)
+        self.widthSlider.set(self.master.bboxWidth)
+        self.widthSlider.pack()
+        self.colourPicker = tk.Button(self, text="Change Bounding Box Colour", command=self.changeColour, fg=self.master.bboxColour)
+        self.colourPicker.pack()
+        self.webcamDropdownLabel = tk.Label(self, text="Webcam Device:")
+        self.webcamDropdownLabel.pack()
+        print(len(webcamThreadHandler.webcams))
+        try:
+            self.webcamDropdown = tk.OptionMenu(self, self.webcamName, *self.webcamOptions)
+            self.webcamDropdown.pack()
+            print("test")
+        except Exception as a:
+            print(a)
+        if len(webcamThreadHandler.webcams) == 0:
+            self.webcamDropdown = tk.Label(self, text="No webcam devices detected. Try reopening settings.", fg="red")
+            self.webcamDropdown.pack()
+        self.changeModelSettings = tk.Button(self, text="Model Settings", command=self.master.openModelSettings)
+        self.changeModelSettings.pack()
+        self.applySettingsButton = tk.Button(self, text="Apply Settings", command=self.applySettings)
+        self.applySettingsButton.pack()
+
+
+    def changeColour(self):
+        self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
+        self.colourPicker.config(fg=self.tempColour)
+        
+
+
+    # function used in the settings tab, opens a toplevel where you can control the confidence threshold (add more here asp)
+        
+
+
+    # function is used for the button in settings, it applies all settings
+    def applySettings(self):
+        self.master.threshold = self.thresholdSlider.get()
+        self.master.webcamSource = webcamThreadHandler.webcams.get(self.webcamName.get())
+        self.master.maxFrameRate = self.frameRateSlider.get()
+        self.master.updateInterval = 1000 // self.master.maxFrameRate
+        self.master.bboxColour = self.tempColour
+        self.master.bboxWidth = self.widthSlider.get()
+        if self.master.currentFrame is not None:
+            self.master.displayCurrentFrame()
+
+
+class ModelSettings(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.master.detecting = False
+        self.master.toggleLabel.config(text="Detection: Inactive", fg="red")
+        self.gridSizeInput = tk.Entry(self)
+        self.boundingBoxesInput = tk.Entry(self)
+        self.classCountInput = tk.Entry(self)
+        self.classesInput = tk.Entry(self)
+        tk.Label(self, text="Grid Size:").pack()
+        self.gridSizeInput.pack()
+        tk.Label(self, text="Bounding Boxes:").pack()
+        self.boundingBoxesInput.pack()
+        tk.Label(self, text="Number Of Classes:").pack()
+        self.classCountInput.pack()
+        tk.Label(self, text="Class Names:").pack()
+        self.classesInput.pack()
+        self.loadWeightsButton = tk.Button(self, text="Load Weights", command=self.loadWeights)
+        self.modelLoadWarningLabel = tk.Label(self,
+                                               text="Ensure you have entered the parameters BEFORE loading weights.",
+                                               fg="red")
+        self.loadWeightsButton.pack()
+        self.modelLoadWarningLabel.pack()
+
+    def loadWeights(self):
+        self.master.model = None
+        self.master.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
+        self.master.model.build((None,448,448,3))
+        self.master.classes = self.classesInput.get()
+        weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
+        print(weights)
+        try:
+            self.master.model.load_weights(weights.name.replace("\\","\\\\"))
+        except ValueError:
+            messagebox.showerror(title="Incompatible Weights",
+                                      message="The weights do not correctly match the layers based on the parameters provided. Ensure parameters are correct and retry.")
+            self.master.model = None
+            return
+    
+        self.destroy()
+
+
+class ModelTrainer(tk.Toplevel):
+    def __init__(self, master):
+        super().__init__(master)
+        self.trainingDir = None
+        self.outputDir = None
+        self.trainingGridSizeInput = tk.Entry(self)
+        self.trainingBoundingBoxesInput = tk.Entry(self)
+        self.trainingClassCountInput = tk.Entry(self)
+        tk.Label(self, text="Grid Size:").pack()
+        self.trainingGridSizeInput.pack()
+        tk.Label(self, text="Bounding Boxes:").pack()
+        self.trainingBoundingBoxesInput.pack()
+        tk.Label(self, text="Number Of Classes:").pack()
+        self.trainingClassCountInput.pack()
+        tk.Label(self, text="Input number of epochs:").pack()
+        self.epochsInput = tk.Entry(self)
+        self.epochsInput.pack()
+        tk.Label(self, text="Input Learning rate:").pack()
+        self.learningRateInput = tk.Entry(self)
+        self.learningRateInput.pack()
+        tk.Label(self, text="Input Batch Size:").pack()
+        self.batchSizeInput = tk.Entry(self)
+        self.batchSizeInput.pack()
+        self.trainingDataInputButton = tk.Button(self, text="Input Training Folder", command=self.selectTrainingData)
+        self.trainingDataInputButtonLabel = tk.Label(self, text="Currently Selected: None")
+        self.trainingDataInputButton.pack()
+        self.trainingDataInputButtonLabel.pack()
+        self.outputButton = tk.Button(self, text="Input Output Folder", command=self.selectOutputFolder)
+        self.outputButtonLabel = tk.Label(self, text="Currently Selected: None")
+        self.outputButton.pack()
+        self.outputButtonLabel.pack()
+        self.beginTrainingButton = tk.Button(self, text="Begin Training", command=self.beginTraining)
+        self.beginTrainingButton.pack()
+
+    def selectTrainingData(self):
+        try:
+            self.trainingDir = filedialog.askdirectory(title="Select Training Folder:")
+        except Exception:
+            return
+        self.trainingDataInputButtonLabel.config(text=f"Currently Selected: {self.trainingDir}")
+
+    def selectOutputFolder(self):
+        try:
+            self.outputDir = filedialog.askdirectory(title="Select Training Annotations Folder:")
+        except Exception:
+            return
+        self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
+    
+        
+
+    def beginTraining(self):
+        self.currentInfoWindow = TrainingInfo(self, int(self.epochsInput.get()))
+        self.trainer = ModelTraining(YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get())),
+                                     int(self.epochsInput.get()), int(self.batchSizeInput.get()), float(self.learningRateInput.get()), self.trainingDir,
+                                     int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir, self.currentInfoWindow)
+        modelTrainingThread = threading.Thread(target=self.trainer.train) #
+        modelTrainingThread.start()
+
+
+class TrainingInfo(tk.Toplevel):
+    def __init__(self, master, totalEpochs):
+        super().__init__(master)
+        self.epochLossContainer = []
+        self.totalEpochs = totalEpochs #1 # default
+        self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None, None,  None, None
+        self.lossLabel = tk.Label(self, text=f"Current Loss: N/A")
+        self.classLossLabel = tk.Label(self, text=f"Current Class Loss: N/A")
+        self.confidenceLossLabel = tk.Label(self, text=f"Current Confidence Loss: N/A")
+        self.boundingBoxLossLabel = tk.Label(self, text=f"Current Bounding Box Loss: N/A")
+        self.epochProgressBar = ttk.Progressbar(self, orient="horizontal", length=200, mode="determinate")
+        self.trainingProgressBar = ttk.Progressbar(self, orient="horizontal", length=200, mode="determinate")
+        self.lossLabel.pack()
+        self.classLossLabel.pack()
+        self.confidenceLossLabel.pack()
+        self.boundingBoxLossLabel.pack()
+        tk.Label(self, text="Current Epoch Progress:").pack()
+        self.epochProgressBar.pack()
+        tk.Label(self, text="Current Training Progress:").pack()
+        self.trainingProgressBar.pack()
+
+    
+
 
 
 if __name__ == "__main__":
