@@ -5,7 +5,7 @@ import random
 import numpy as np
 import os
 from math import floor
-from model.loss import boundingBoxLoss, ClassLoss, ConfidenceLoss, yoloLoss
+from model.loss import YoloLoss
 GPU = True
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
@@ -15,6 +15,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 this file will contain another class for another GUI which has the sole purpose of defining new models and training them, this GUI will have toplevels which display
 graphs of the various infomation of the training process aswell as displaying the values of the losses and the mAP during training
 """
+
 
 
 
@@ -66,6 +67,9 @@ class ModelTraining:
         self.S = S
         self.B = B
         self.C = C
+        print(f"FUCKING USELESS B: {self.B}")
+        print(f"FUCKING USELESS C: {self.C}")
+        print(f"FUCKING USELESS S: {self.S}")
         self.outputDir = outputDir
         self.xTrain, self.yTrain = self.preprocessData()
         self.checkpoint = tf.keras.callbacks.ModelCheckpoint(
@@ -75,13 +79,13 @@ class ModelTraining:
     verbose=1
 )
         self.guiInstance = guiInstance
-        self.model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=self.learningRate, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+        loss = YoloLoss(B=self.B)
+        self.model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=self.learningRate, momentum=0.9), loss=loss, metrics=["accuracy", loss.boundingBoxLoss, loss.ClassLoss, loss.ConfidenceLoss])
         
     def encodeLabels(self,textFileDir):
         # Create label array: [S, S, B * (5 + C)]
         label = np.zeros(shape=[self.S, self.S, (self.B * 5) + self.C])
         cellSize = 1 / self.S
-        
         with open(textFileDir, "r") as t:
             for line in t.readlines():
                 properties = line.split(" ")
@@ -109,7 +113,7 @@ class ModelTraining:
                 
                 # Assign values for each bounding box (support multiple B)
                 for b in range(self.B):
-                    boxStart = b * (5 + self.C)  # Start index for this box in the label array
+                    boxStart = (b * 5)  # Start index for this box in the label array
                     
                     # If the confidence is 0 (no bounding box assigned yet), assign this box
                     #print(cell_x, cell_y, bbox_y)

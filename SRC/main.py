@@ -82,7 +82,6 @@ class webcamThreadHandler:
                 #print(f"OpenCV can access webcam {idx}: {name}")
                 cls.webcams.update({name : idx})
                 cap.release()
-                print("YES")
             else:
                 ##print(f"OpenCV cannot access webcam {idx}: {name}")
                 print("no")
@@ -513,9 +512,10 @@ class ModelTrainer(tk.Toplevel):
 
     def beginTraining(self):
         self.currentInfoWindow = TrainingInfo(self, int(self.epochsInput.get()))
-        self.trainer = ModelTraining(YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get())),
+        model = YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()))
+        self.trainer = ModelTraining(model,
                                      int(self.epochsInput.get()), int(self.batchSizeInput.get()), float(self.learningRateInput.get()), self.trainingDir,
-                                     int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()), self.outputDir, self.currentInfoWindow)
+                                     int(self.trainingGridSizeInput.get()), int(self.trainingBoundingBoxesInput.get()), int(self.trainingClassCountInput.get()), self.outputDir, self.currentInfoWindow)
         modelTrainingThread = threading.Thread(target=self.trainer.train) #
         modelTrainingThread.start()
 

@@ -2,7 +2,7 @@
 import tensorflow as tf
 from keras import layers
 from CNNblocks import CNNBlock
-from loss import yoloLoss, boundingBoxLoss, ClassLoss, ConfidenceLoss
+from loss import yoloLossWrapper, boundingBoxLoss, ClassLoss, ConfidenceLoss
 from predictionHandler import findBoxes
 from dataProcessing import preprocessData, convertToArray
 import numpy as np
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
     model.build(input_shape=(None, 448, 448, 3))
 
-    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=yoloLoss, metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=yoloLossWrapper(), metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
     #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
     model.summary()
     print(yTrain.shape)
