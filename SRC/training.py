@@ -16,6 +16,8 @@ this file will contain another class for another GUI which has the sole purpose 
 graphs of the various infomation of the training process aswell as displaying the values of the losses and the mAP during training
 """
 
+""" need to figure out how to get the data :( )"""
+
 
 
 

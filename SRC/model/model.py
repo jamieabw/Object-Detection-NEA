@@ -2,7 +2,7 @@
 import tensorflow as tf
 from keras import layers
 from CNNblocks import CNNBlock
-from loss import yoloLossWrapper, boundingBoxLoss, ClassLoss, ConfidenceLoss
+from loss import YoloLoss#, boundingBoxLoss, ClassLoss, ConfidenceLoss
 from predictionHandler import findBoxes
 from dataProcessing import preprocessData, convertToArray
 import numpy as np
@@ -35,7 +35,7 @@ BBOXES = 1
 lrSchedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay([200,400,600,20000,30000], [0.00035 * scale for scale in [2.5,2,1.5,1,0.5,0.1]])
 startVal = 0
 l2Regularizer = tf.keras.regularizers.l2(0)
-trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\VOCtrainval_11-May-2012\\VOCdevkit\\VOC2012\\JPEGImages"
+trainingDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\training data set"
 validationDirectory = 'C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\PASCAL VOC\\valid\\VOCdevkit\\VOC2007\\JPEGImages'
 testDirectory = "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
 "C:\\Users\\jamie\\Documents\\CS NEA 24 25 source code\\datasets\\dataset-humans\\INRIA Person detection dataset.v1i.darknet\\test"
@@ -208,17 +208,22 @@ def calculateIoU(predBox, trueBox):
 if __name__ == "__main__":
     model = YoloV1()#testModel(num_classes=1, num_boxes=1)#YoloV1()
     model.build(input_shape=(None, 448, 448, 3))
-
-    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=yoloLossWrapper(), metrics=["accuracy", boundingBoxLoss, ClassLoss, ConfidenceLoss])
+    loss = YoloLoss()
+    model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=lrSchedule, momentum=0.9), loss=loss, metrics=["accuracy", loss.boundingBoxLoss, loss.ClassLoss, loss.ConfidenceLoss])
     #CHANGE THIS BNACK TO LEARNING SCHEDULE ASAP
     model.summary()
     print(yTrain.shape)
     print(yTest.shape)
     # Load the weights
-    model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
-    #model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
+    #model.load_weights("C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5")
+    model.save_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") 
     #train()
-    for data, truth in xTrain, yTrain:
+    print(xTrain.shape)
+    print(xTrain)
+    for i, data in enumerate(xTrain):
+        truth = yTrain[i]
+        print(data.shape)
+        print(truth.shape)
         prediction = model.predict(data)
         print(calculatemAP(prediction, truth))
 

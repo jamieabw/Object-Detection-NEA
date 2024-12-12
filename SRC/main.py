@@ -40,7 +40,6 @@ TODO:
 - add a function to calculate mAP
 - add a window which displays statistical info about the training process, include: losses, mAP, epoch number, maybe a preview window
 which displays the results of running the model on a unique not seen before image after each epoch
-- fix the model so it can accept multiple bounding boxes
 - add the choice of a penalising l2 regulariser
 - add support to use different GPUs for training
 - add a debug menu (this could display, current FPS)
