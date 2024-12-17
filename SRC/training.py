@@ -17,33 +17,53 @@ graphs of the various infomation of the training process aswell as displaying th
 """
 
 """ need to figure out how to get the data :( )"""
-
+N = 10 # 
 
 
 
 class TrainingInfoHandler(tf.keras.callbacks.Callback):
     def __init__(self, guiInstance):
         super().__init__()
+        self.batchCounter = 0
         self.currentEpoch = 0
         self.yoloLoss = None
         self.bboxLoss = None
         self.classLoss = None
         self.confidenceLoss = None
         self.guiInstance = guiInstance
+        self.predictionsForMAP = []
+        self.truthsForMAP = []
 
     def on_batch_end(self, batch, logs=None):
         if logs is not None:
-            self.currentEpoch += 1
+            totalSteps = self.params.get("steps")
             self.yoloLoss = round(logs.get('loss'), 3)
             self.confidenceLoss = round(logs.get('ConfidenceLoss'), 3)
             self.classLoss = round(logs.get('ClassLoss'), 3)
             self.bboxLoss = round(logs.get('boundingBoxLoss'), 3)
             self.setLossVals()
             self.updateEpochProgress(batch)
+            if self.batchCounter > totalSteps - N:
+                images, labels = self.getBatch(batch)
+                for i in range(len(images)):
+                    self.predictionsForMAP.append(self.guiInstance.master.model.predict(images[i]))
+                    self.truthsForMAP.append(labels[i])
+            self.batchCounter += 1
 
     def on_epoch_end(self, epoch, logs=None):
+        self.batchCounter = 0
+        self.currentEpoch += 1
         self.updateTrainingProgress()
-        self.guiInstance.self.epochLossContainer.append((self.yoloLoss, self.confidenceLoss, self.classLoss, self.bboxLoss))
+        print(self.yoloLoss, self.bboxLoss)
+        #self.guiInstance.epochLossContainer.append((self.yoloLoss, self.confidenceLoss, self.classLoss, self.bboxLoss))
+        self.guiInstance.epochLossContainer[0].append(self.yoloLoss)
+        self.guiInstance.epochLossContainer[1].append(self.confidenceLoss)
+        self.guiInstance.epochLossContainer[2].append(self.classLoss)
+        self.guiInstance.epochLossContainer[3].append(self.bboxLoss)
+        self.guiInstance.updatePlot()
+        self.calculateMAP()
+        self.predictionsForMAP = []
+        self.truthsForMAP = []
 
 
     def updateEpochProgress(self, currentStep):
@@ -58,6 +78,44 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.guiInstance.classLossLabel.config(text=f"Current Class Loss: {self.classLoss}")
         self.guiInstance.confidenceLossLabel.config(text=f"Current Confidence Loss: {self.confidenceLoss}")
         self.guiInstance.boundingBoxLossLabel.config(text=f"Current Bounding Box Loss: {self.bboxLoss}")
+
+    def getBatch(self, batch):
+        images, labels = self.params["train_data"][batch]
+        return images, labels
+
+    def calculateMAP(self):
+        """
+        THIS IS WHAT I AM CURRENTLY WORKING ON
+        """
+        TP = 0
+        FP = 0
+        FN = 0
+        precision = []
+        recall = []
+        for j in range(7):
+            for i in range(7):
+                predictionCell = self.predictionsForMAP[i][j]
+                trueCell = self.truthsForMAP[i][j]
+                if predictionCell[0] < 0:
+                    continue
+                IoU = calculateIoU(predictionCell, trueCell)
+                if IoU >= IoUThreshold:
+                    if trueCell[0] == 1:
+                        TP += 1
+                    
+                    else:
+                        FP += 1
+                else:
+                    if trueCell[0] == 1:
+                        FN += 1
+                if TP + FP == 0:
+                    precision.append(0)
+                else:
+                    precision.append(TP / (TP + FP))
+                if TP + FN == 0:
+                    recall.append(0)
+                else:
+                    recall.append(TP / (TP + FN))
             
 class ModelTraining:
     def __init__(self, model, epochs, batchSize, learningRate, trainingDir, S, B, C, outputDir, guiInstance):
@@ -75,7 +133,7 @@ class ModelTraining:
         self.outputDir = outputDir
         self.xTrain, self.yTrain = self.preprocessData()
         self.checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    filepath='{self.outputDir}\\modelSave_epoch_{epoch:02d}.h5',  # Use the built-in epoch variable
+    filepath= f"{self.outputDir}" + '\\modelSave_epoch_{epoch:02d}.h5',  # Use the built-in epoch variable
     save_weights_only=True,
     save_freq="epoch",
     verbose=1

@@ -60,7 +60,7 @@ class YoloLoss:
         
         # Add epsilon to avoid division by zero
         nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32)
-        return 2 * (xyLoss + whLoss) / (nonZeroCount)
+        return (xyLoss + whLoss) / (nonZeroCount)
 
 
 """def yoloLossWrapper(B=1):

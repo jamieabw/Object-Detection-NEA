@@ -20,6 +20,8 @@ import threading
 import time
 import traceback
 from training import ModelTraining
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
@@ -514,12 +516,10 @@ class ModelTrainer(tk.Toplevel):
                                      int(self.trainingGridSizeInput.get()), int(self.trainingBoundingBoxesInput.get()), int(self.trainingClassCountInput.get()), self.outputDir, self.currentInfoWindow)
         modelTrainingThread = threading.Thread(target=self.trainer.train) #
         modelTrainingThread.start()
-
-
 class TrainingInfo(tk.Toplevel):
     def __init__(self, master, totalEpochs):
         super().__init__(master)
-        self.epochLossContainer = []
+        self.epochLossContainer = [[], [], [], []]
         self.totalEpochs = totalEpochs #1 # default
         self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None, None,  None, None
         self.lossLabel = tk.Label(self, text=f"Current Loss: N/A")
@@ -536,6 +536,27 @@ class TrainingInfo(tk.Toplevel):
         self.epochProgressBar.pack()
         tk.Label(self, text="Current Training Progress:").pack()
         self.trainingProgressBar.pack()
+        self.createPlot()
+        self.lossGraphDisplay = FigureCanvasTkAgg(self.lossGraph, master=self)
+        self.lossGraphWidget = self.lossGraphDisplay.get_tk_widget()
+        self.lossGraphWidget.pack()
+    
+    def createPlot(self):
+        self.lossGraph, self.lossGraphAxis = plt.subplots()
+        self.lossGraphAxis.set_title("Epoch-Loss Graph")
+        self.lossGraphAxis.set_xlabel("Epoch")
+        self.lossGraphAxis.set_ylabel("Loss Value")
+        self.lossGraphAxis.legend()
+
+    def updatePlot(self):
+        loss, confidenceLoss, classLoss, bboxLoss = self.epochLossContainer[0],self.epochLossContainer[1],self.epochLossContainer[2],self.epochLossContainer[3]
+        self.lossGraphAxis.clear()
+        #self.lossGraphAxis.plot(range(len(loss)), loss, color="red", label="YOLO Loss")
+        self.lossGraphAxis.plot(range(len(classLoss)), classLoss, color="blue", label="Class Loss")
+        self.lossGraphAxis.plot(range(len(confidenceLoss)), confidenceLoss, color="green", label="Confidence Loss")
+        self.lossGraphAxis.plot(range(len(bboxLoss)), bboxLoss, color="orange", label="Bounding Box Loss")
+        self.lossGraphAxis.legend()
+        self.lossGraphDisplay.draw()
 
     
 
