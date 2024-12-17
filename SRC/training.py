@@ -132,7 +132,7 @@ class ModelTraining:
                         # One-hot encode the class (start from box_start + 5)
                         label[cellX, cellY, boxStart + 5 + classId] = 1
                         
-                        break  # Only assign one bounding box per object
+                        break  # Only assign one bounding box per object why is this here??
                 
         return np.nan_to_num(label)
     

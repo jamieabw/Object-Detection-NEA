@@ -103,14 +103,14 @@ WEBCAM_DETECTION_THREAD = threading.Thread(target=getWebcamDevicesThreadHandler,
 
 
 class YoloV1(tf.keras.Model):
-    def __init__(self, grid_size=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
+    def __init__(self, gridSize=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
         super(YoloV1, self).__init__()
-        self.grid_size = grid_size
+        self.gridSize = gridSize
         self.classes = classes
         self.bboxes = bboxes
         self.convLayers = CNNBlock(KERNELS, SIZES, STRIDES, l2Regularizer)
         self.denseLayer = layers.Dense(4096, kernel_regularizer=l2Regularizer)
-        self.outputDense = layers.Dense(self.grid_size * self.grid_size * ((5 * self.bboxes) + self.classes), kernel_regularizer=l2Regularizer) # adding a relu activation to this breaks the loss i think - dunno why
+        self.outputDense = layers.Dense(self.gridSize * self.gridSize * ((5 * self.bboxes) + self.classes), kernel_regularizer=l2Regularizer) # adding a relu activation to this breaks the loss i think - dunno why
 
     def call(self, inputs):
         x = self.convLayers(inputs)
@@ -119,7 +119,7 @@ class YoloV1(tf.keras.Model):
         x = layers.LeakyReLU(alpha=0.1)(x)
         #x = layers.Dropout(0.5)(x)
         x = self.outputDense(x)
-        x =  layers.Reshape((self.grid_size, self.grid_size, (5 * self.bboxes) + self.classes))(x)
+        x =  layers.Reshape((self.gridSize, self.gridSize, (5 * self.bboxes) + self.classes))(x)
         return x
 
 """model = YoloV1()
@@ -211,9 +211,6 @@ class GUI(tk.Tk):
     def openModelSettings(self):
         if self.windowCheck(self.currentModelSettingsWindow):
             self.currentModelSettingsWindow = ModelSettings(self)
-    
-    def updateLossGraph(self):
-        ...
 
     def openModelTrainer(self):
         if self.windowCheck(self.currentModelTrainer):
@@ -309,7 +306,7 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="hawk tuah"):
         PIL.Image: The image with drawn bounding boxes.
     """
     # Get grid size and number of bounding boxes per grid cell
-    s = instance.model.grid_size  # grid size (e.g., 7x7)
+    s = instance.model.gridSize  # grid size (e.g., 7x7)
     b = instance.model.bboxes  # number of bounding boxes per grid cell (e.g., 2) 
     classes = classes.split(",")
     numOfClasses = len(classes)
