@@ -59,40 +59,29 @@ def yoloLossPlaceholder():
 class webcamThreadHandler:
     webcams = {}
 
-
     @classmethod
     def getWebcamDevices(cls):
-        #cls.webcams.clear()
         result = subprocess.run(['wmic', 'path', 'Win32_PnPEntity', 'where', 'Caption like "%cam%"', 'get', 'Caption'], stdout=subprocess.PIPE)
         output = result.stdout.decode('utf-8').strip().split("\n")[1:]  # Skip the header line
 
-            # Clean up the output and remove any empty lines
+        # Clean up the output and remove any empty lines
         deviceNames = [line.strip() for line in output if line.strip()]
         
-        #print("Available webcams:")
             
             # Loop through possible OpenCV sources (device IDs 0-9)
         if len(deviceNames) == 0:
             cls.webcams.clear()
         for idx, name in enumerate(deviceNames):
-            #print(f"Webcam source ID: {idx}, Name: {name}")
                 # Check if OpenCV can access the device
             cap = cv2.VideoCapture(idx)
             
             if cap.isOpened():
-                #print(f"OpenCV can access webcam {idx}: {name}")
                 cls.webcams.update({name : idx})
                 cap.release()
             else:
-                ##print(f"OpenCV cannot access webcam {idx}: {name}")
-                print("no")
                 if name in list(cls.webcams.keys()):
                     del cls.webcams[name]
                 print(cls.webcams)
-                #webcams.update({name : (idx, 0)})
-
-        #
-
 
 def getWebcamDevicesThreadHandler():
     while True:
@@ -378,13 +367,13 @@ class Settings(tk.Toplevel):
         self.colourPicker.pack()
         self.webcamDropdownLabel = tk.Label(self, text="Webcam Device:")
         self.webcamDropdownLabel.pack()
-        print(len(webcamThreadHandler.webcams))
+        # self.webcamDropdown either a label or a dropdown depending on connected devices
         try:
             self.webcamDropdown = tk.OptionMenu(self, self.webcamName, *self.webcamOptions)
             self.webcamDropdown.pack()
             print("test")
-        except Exception as a:
-            print(a)
+        except Exception as exception:
+            print(exception)
         if len(webcamThreadHandler.webcams) == 0:
             self.webcamDropdown = tk.Label(self, text="No webcam devices detected. Try reopening settings.", fg="red")
             self.webcamDropdown.pack()
@@ -398,11 +387,6 @@ class Settings(tk.Toplevel):
         self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
         self.colourPicker.config(fg=self.tempColour)
         
-
-
-    # function used in the settings tab, opens a toplevel where you can control the confidence threshold (add more here asp)
-        
-
 
     # function is used for the button in settings, it applies all settings
     def applySettings(self):

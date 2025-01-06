@@ -22,6 +22,9 @@ N = 10 #
 
 
 class TrainingInfoHandler(tf.keras.callbacks.Callback):
+    mapInputs = []
+    mapPredictions = []
+    mapTruths = []
     def __init__(self, guiInstance):
         super().__init__()
         self.batchCounter = 0
@@ -31,8 +34,7 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.classLoss = None
         self.confidenceLoss = None
         self.guiInstance = guiInstance
-        self.predictionsForMAP = []
-        self.truthsForMAP = []
+        self.IoUThreshold = 0.5
 
     def on_batch_end(self, batch, logs=None):
         if logs is not None:
@@ -43,11 +45,13 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
             self.bboxLoss = round(logs.get('boundingBoxLoss'), 3)
             self.setLossVals()
             self.updateEpochProgress(batch)
-            if self.batchCounter > totalSteps - N:
+            """if self.batchCounter > totalSteps - N:
+                #batchData = logs.get("batch_data")
+                #print(batchData)
                 images, labels = self.getBatch(batch)
                 for i in range(len(images)):
                     self.predictionsForMAP.append(self.guiInstance.master.model.predict(images[i]))
-                    self.truthsForMAP.append(labels[i])
+                    self.truthsForMAP.append(labels[i])"""
             self.batchCounter += 1
 
     def on_epoch_end(self, epoch, logs=None):
@@ -61,9 +65,8 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.guiInstance.epochLossContainer[2].append(self.classLoss)
         self.guiInstance.epochLossContainer[3].append(self.bboxLoss)
         self.guiInstance.updatePlot()
+        mAPDataHandler.mAPBatchPredict()
         self.calculateMAP()
-        self.predictionsForMAP = []
-        self.truthsForMAP = []
 
 
     def updateEpochProgress(self, currentStep):
@@ -79,43 +82,84 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.guiInstance.confidenceLossLabel.config(text=f"Current Confidence Loss: {self.confidenceLoss}")
         self.guiInstance.boundingBoxLossLabel.config(text=f"Current Bounding Box Loss: {self.bboxLoss}")
 
-    def getBatch(self, batch):
-        images, labels = self.params["train_data"][batch]
-        return images, labels
+    """def getBatch(self, batch):
+        print(self.params)
+        images, labels = self.params.get("train_data")
+        return images, labels"""
+    
+    def calculateIoU(self, predBox, trueBox):
+        xTrue, yTrue, wTrue, hTrue = trueBox[1], trueBox[2], trueBox[3], trueBox[4] 
+        xPred, yPred, wPred, hPred = predBox[1], predBox[2], predBox[3], predBox[4]
+
+        # Calculate corners of the bounding boxes
+        topLeftTrue = [xTrue - (wTrue / 2), yTrue - (hTrue / 2)]
+        bottomRightTrue = [xTrue + (wTrue / 2), yTrue + (hTrue / 2)]
+        topLeftPred = [xPred - (wPred / 2), yPred - (hPred / 2)]
+        bottomRightPred = [xPred + (wPred / 2), yPred + (hPred / 2)]
+
+        # Calculate intersection rectangle
+        xLeft = max(topLeftTrue[0], topLeftPred[0])
+        yTop = max(topLeftTrue[1], topLeftPred[1])
+        xRight = min(bottomRightTrue[0], bottomRightPred[0])
+        yBottom = min(bottomRightTrue[1], bottomRightPred[1])
+
+        # Check for no intersection
+        if xRight <= xLeft or yBottom <= yTop:
+            return 0.0
+
+        # Calculate intersection area
+        intersection = (xRight - xLeft) * (yBottom - yTop)
+
+        # Calculate areas of the individual boxes
+        areaTrue = wTrue * hTrue
+        areaPred = wPred * hPred
+
+        # Calculate union area
+        union = areaTrue + areaPred - intersection
+
+        # Calculate IoU
+        iou = intersection / union
+        return iou
 
     def calculateMAP(self):
         """
-        THIS IS WHAT I AM CURRENTLY WORKING ON
+        THIS IS WHAT I AM CURRENTLY WORKING ON.
+        TODO: everything works except from these values, they arent being generated properly, just a list of 0s
+        so will need to fix that and implement the final two graphs and everything is finished wheyy
         """
         TP = 0
         FP = 0
         FN = 0
         precision = []
         recall = []
-        for j in range(7):
-            for i in range(7):
-                predictionCell = self.predictionsForMAP[i][j]
-                trueCell = self.truthsForMAP[i][j]
-                if predictionCell[0] < 0:
-                    continue
-                IoU = calculateIoU(predictionCell, trueCell)
-                if IoU >= IoUThreshold:
-                    if trueCell[0] == 1:
-                        TP += 1
-                    
+        print(np.array(TrainingInfoHandler.mapPredictions).shape)
+        print(np.array(TrainingInfoHandler.mapTruths).shape)
+        for a in range(len(TrainingInfoHandler.mapTruths)):
+            for j in range(7):
+                for i in range(7):
+                    predictionCell = TrainingInfoHandler.mapPredictions[a][i][j]
+                    trueCell = TrainingInfoHandler.mapTruths[a][i][j]
+                    if predictionCell[0] < 0:
+                        continue
+                    IoU = self.calculateIoU(predictionCell, trueCell)
+                    if IoU >= self.IoUThreshold:
+                        if trueCell[0] == 1:
+                            TP += 1
+                        else:
+                            FP += 1
                     else:
-                        FP += 1
-                else:
-                    if trueCell[0] == 1:
-                        FN += 1
-                if TP + FP == 0:
-                    precision.append(0)
-                else:
-                    precision.append(TP / (TP + FP))
-                if TP + FN == 0:
-                    recall.append(0)
-                else:
-                    recall.append(TP / (TP + FN))
+                        if trueCell[0] == 1:
+                            FN += 1
+                    if TP + FP == 0:
+                        precision.append(0)
+                    else:
+                        precision.append(TP / (TP + FP))
+                    if TP + FN == 0:
+                        recall.append(0)
+                    else:
+                        recall.append(TP / (TP + FN))
+                    #print(recall)
+                    #print(precision)
             
 class ModelTraining:
     def __init__(self, model, epochs, batchSize, learningRate, trainingDir, S, B, C, outputDir, guiInstance):
@@ -190,7 +234,6 @@ class ModelTraining:
                         # One-hot encode the class (start from box_start + 5)
                         label[cellX, cellY, boxStart + 5 + classId] = 1
                         
-                        break  # Only assign one bounding box per object why is this here??
                 
         return np.nan_to_num(label)
     
@@ -251,7 +294,9 @@ class ModelTraining:
             startVal += self.batchSize
             if startVal >= len(labels):
                 startVal = 0
-            
+            if endVal == len(labels):
+                    mAPDataHandler.gatherMapData(batchInput, batchOutput)
+                    mAPDataHandler.model = self.model
             yield (np.array(batchInput).astype("float32") / 255.0, np.array(batchOutput))
 
     def train(self):
@@ -259,6 +304,25 @@ class ModelTraining:
                         epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                           callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
         
+
+class mAPDataHandler:
+    model = None
+    def gatherMapData(inputBatch, outputBatch):
+        TrainingInfoHandler.mapTruths = outputBatch
+        TrainingInfoHandler.mapInputs = inputBatch
+            
+    @classmethod
+    def mAPBatchPredict(cls):
+        inputBatch = np.array(TrainingInfoHandler.mapInputs)
+        outputBatch = np.array(TrainingInfoHandler.mapTruths)
+        predictions = []
+        #print(outputBatch.shape)
+        print(inputBatch.shape)
+        for step in inputBatch:
+            
+            #print(step.shape)
+            predictions.append(cls.model.predict(np.array(step).reshape((1,448,448,3)).astype("float32") / 255.0)[0])
+        TrainingInfoHandler.mapPredictions = predictions
 
 def convertToArray(imagePath, size=(448,448)):
     image = Image.open(imagePath)
