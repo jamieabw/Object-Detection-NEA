@@ -321,6 +321,7 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="hawk tuah"):
             for box in range(b):  # Iterate over each bounding box in the current grid cell
                 # Extract confidence and bounding box details for this box
                 confidence = output[i, j, box * 5]
+                print(confidence)
                 if confidence > instance.threshold:  # Draw only if confidence is above the threshold
                     xCentre = output[i, j, box * 5 + 1]
                     yCentre = output[i, j, box * 5 + 2]

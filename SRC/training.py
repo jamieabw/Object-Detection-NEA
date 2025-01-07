@@ -91,34 +91,42 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         xTrue, yTrue, wTrue, hTrue = trueBox[1], trueBox[2], trueBox[3], trueBox[4] 
         xPred, yPred, wPred, hPred = predBox[1], predBox[2], predBox[3], predBox[4]
 
-        # Calculate corners of the bounding boxes
-        topLeftTrue = [xTrue - (wTrue / 2), yTrue - (hTrue / 2)]
-        bottomRightTrue = [xTrue + (wTrue / 2), yTrue + (hTrue / 2)]
-        topLeftPred = [xPred - (wPred / 2), yPred - (hPred / 2)]
-        bottomRightPred = [xPred + (wPred / 2), yPred + (hPred / 2)]
-
-        # Calculate intersection rectangle
-        xLeft = max(topLeftTrue[0], topLeftPred[0])
-        yTop = max(topLeftTrue[1], topLeftPred[1])
-        xRight = min(bottomRightTrue[0], bottomRightPred[0])
-        yBottom = min(bottomRightTrue[1], bottomRightPred[1])
-
-        # Check for no intersection
-        if xRight <= xLeft or yBottom <= yTop:
-            return 0.0
-
+            # Calculate box corners (xmin, ymin, xmax, ymax)
+        # Convert center coordinates to corners
+        x1_min, y1_min = xTrue - wTrue / 2, yTrue - hTrue / 2
+        x1_max, y1_max = xTrue + wTrue / 2, yTrue + hTrue / 2
+        
+        x2_min, y2_min = xPred - wPred / 2, yPred - hPred / 2
+        x2_max, y2_max = xPred + wPred / 2, yPred + hPred / 2
+        
+        # Calculate intersection coordinates
+        inter_xmin = max(x1_min, x2_min)
+        inter_ymin = max(y1_min, y2_min)
+        inter_xmax = min(x1_max, x2_max)
+        inter_ymax = min(y1_max, y2_max)
+        
         # Calculate intersection area
-        intersection = (xRight - xLeft) * (yBottom - yTop)
-
-        # Calculate areas of the individual boxes
-        areaTrue = wTrue * hTrue
-        areaPred = wPred * hPred
-
-        # Calculate union area
-        union = areaTrue + areaPred - intersection
-
+        inter_width = max(0, inter_xmax - inter_xmin)
+        inter_height = max(0, inter_ymax - inter_ymin)
+        intersection_area = inter_width * inter_height
+        
+        # Calculate areas of the boxes
+        true_area = (x1_max - x1_min) * (y1_max - y1_min)
+        pred_area = (x2_max - x2_min) * (y2_max - y2_min)
+        union_area = true_area + pred_area - intersection_area
+        
+        # Log for debugging
+        print(f"True box corners: ({x1_min}, {y1_min}, {x1_max}, {y1_max})")
+        print(f"Pred box corners: ({x2_min}, {y2_min}, {x2_max}, {y2_max})")
+        print(f"Intersection dims: width={inter_width}, height={inter_height}")
+        print(f"Intersection area: {intersection_area}, Union area: {union_area}")
+        
+        # Avoid division by zero
+        if union_area == 0:
+            return 0.0
+        
         # Calculate IoU
-        iou = intersection / union
+        iou = intersection_area / union_area
         return iou
 
     def calculateMAP(self):
@@ -142,14 +150,19 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
                     if predictionCell[0] < 0:
                         continue
                     IoU = self.calculateIoU(predictionCell, trueCell)
-                    if IoU >= self.IoUThreshold:
+                    print(trueCell[0], IoU)
+                    if IoU >= 0.1:#self.IoUThreshold:
+                        print(trueCell[0])
                         if trueCell[0] == 1:
                             TP += 1
+                            print("TP")
                         else:
                             FP += 1
+                            print("FP")
                     else:
                         if trueCell[0] == 1:
                             FN += 1
+                            print("FN")
                     if TP + FP == 0:
                         precision.append(0)
                     else:
@@ -300,6 +313,8 @@ class ModelTraining:
             yield (np.array(batchInput).astype("float32") / 255.0, np.array(batchOutput))
 
     def train(self):
+        self.model.build((None, 448,448,3))
+        self.model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") # REMOVE THIS URGENT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.model.fit(self.dataGenerator(),
                         epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                           callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
@@ -321,7 +336,7 @@ class mAPDataHandler:
         for step in inputBatch:
             
             #print(step.shape)
-            predictions.append(cls.model.predict(np.array(step).reshape((1,448,448,3)).astype("float32") / 255.0)[0])
+            predictions.append(cls.model.predict(np.array(step).reshape((1,448,448,3)).astype("float32"))[0]) # / 255.0 after astype
         TrainingInfoHandler.mapPredictions = predictions
 
 def convertToArray(imagePath, size=(448,448)):
