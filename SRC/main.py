@@ -505,6 +505,9 @@ class TrainingInfo(tk.Toplevel):
     def __init__(self, master, totalEpochs):
         super().__init__(master)
         self.epochLossContainer = [[], [], [], []]
+        self.mAPContainer = []
+        self.precisionContainer = []
+        self.recallContainer = []
         self.totalEpochs = totalEpochs #1 # default
         self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None, None,  None, None
         self.lossLabel = tk.Label(self, text=f"Current Loss: N/A")
@@ -521,27 +524,53 @@ class TrainingInfo(tk.Toplevel):
         self.epochProgressBar.pack()
         tk.Label(self, text="Current Training Progress:").pack()
         self.trainingProgressBar.pack()
-        self.createPlot()
-        self.lossGraphDisplay = FigureCanvasTkAgg(self.lossGraph, master=self)
+        self.graphFrame = tk.Frame(self)
+        self.graphFrame.pack()
+        self.createPlots()
+        self.lossGraphDisplay = FigureCanvasTkAgg(self.lossGraph, master=self.graphFrame)
         self.lossGraphWidget = self.lossGraphDisplay.get_tk_widget()
-        self.lossGraphWidget.pack()
+        self.lossGraphWidget.grid(row=0,column=0)
+        self.precisionRecallGraphDisplay = FigureCanvasTkAgg(self.precisionRecallGraph, master=self.graphFrame)
+        self.precisionRecallGraphWidget = self.precisionRecallGraphDisplay.get_tk_widget()
+        self.precisionRecallGraphWidget.grid(row=0,column=1)
+        self.mAPGraphDisplay = FigureCanvasTkAgg(self.mAPGraph, master=self.graphFrame)
+        self.mAPGraphWidget = self.mAPGraphDisplay.get_tk_widget()
+        self.mAPGraphWidget.grid(row=0,column=2)
     
-    def createPlot(self):
+    def createPlots(self):
         self.lossGraph, self.lossGraphAxis = plt.subplots()
         self.lossGraphAxis.set_title("Epoch-Loss Graph")
         self.lossGraphAxis.set_xlabel("Epoch")
         self.lossGraphAxis.set_ylabel("Loss Value")
         self.lossGraphAxis.legend()
+        self.precisionRecallGraph, self.precisionRecallGraphAxis = plt.subplots()
+        self.precisionRecallGraphAxis.set_title("Precision-Recall Graph")
+        self.precisionRecallGraphAxis.set_xlabel("Precision")
+        self.precisionRecallGraphAxis.set_ylabel("Recall")
+        self.precisionRecallGraphAxis.legend()
+        self.mAPGraph, self.mAPGraphAxis = plt.subplots()
+        self.mAPGraphAxis.set_title("Epoch-mAP Graph")
+        self.mAPGraphAxis.set_xlabel("Epoch")
+        self.mAPGraphAxis.set_ylabel("mAP")
+        self.mAPGraphAxis.legend()
 
-    def updatePlot(self):
+    def updatePlots(self):
         loss, confidenceLoss, classLoss, bboxLoss = self.epochLossContainer[0],self.epochLossContainer[1],self.epochLossContainer[2],self.epochLossContainer[3]
         self.lossGraphAxis.clear()
+        self.precisionRecallGraphAxis.clear()
+        self.mAPGraphAxis.clear()
         #self.lossGraphAxis.plot(range(len(loss)), loss, color="red", label="YOLO Loss")
         self.lossGraphAxis.plot(range(len(classLoss)), classLoss, color="blue", label="Class Loss")
         self.lossGraphAxis.plot(range(len(confidenceLoss)), confidenceLoss, color="green", label="Confidence Loss")
         self.lossGraphAxis.plot(range(len(bboxLoss)), bboxLoss, color="orange", label="Bounding Box Loss")
         self.lossGraphAxis.legend()
         self.lossGraphDisplay.draw()
+        self.precisionRecallGraphAxis.plot(self.precisionContainer, self.recallContainer)
+        self.precisionRecallGraphDisplay.draw()
+        self.precisionRecallGraphAxis.legend()
+        self.mAPGraphAxis.plot(range(len(self.mAPContainer)), self.mAPContainer)
+        self.mAPGraphDisplay.draw()
+        self.mAPGraphAxis.legend()
 
     
 

@@ -58,15 +58,19 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.batchCounter = 0
         self.currentEpoch += 1
         self.updateTrainingProgress()
-        print(self.yoloLoss, self.bboxLoss)
+        #print(self.yoloLoss, self.bboxLoss)
         #self.guiInstance.epochLossContainer.append((self.yoloLoss, self.confidenceLoss, self.classLoss, self.bboxLoss))
+        mAPDataHandler.mAPBatchPredict()
+        self.mAP = self.calculateMAP()
         self.guiInstance.epochLossContainer[0].append(self.yoloLoss)
         self.guiInstance.epochLossContainer[1].append(self.confidenceLoss)
         self.guiInstance.epochLossContainer[2].append(self.classLoss)
         self.guiInstance.epochLossContainer[3].append(self.bboxLoss)
-        self.guiInstance.updatePlot()
-        mAPDataHandler.mAPBatchPredict()
-        self.calculateMAP()
+        self.guiInstance.mAPContainer.append(self.mAP)
+        for i in range(len(self.recall)):
+            self.guiInstance.recallContainer.append(self.recall[i])
+            self.guiInstance.precisionContainer.append(self.precision[i])
+        self.guiInstance.updatePlots()
 
 
     def updateEpochProgress(self, currentStep):
@@ -90,6 +94,8 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
     def calculateIoU(self, predBox, trueBox):
         xTrue, yTrue, wTrue, hTrue = trueBox[1], trueBox[2], trueBox[3], trueBox[4] 
         xPred, yPred, wPred, hPred = predBox[1], predBox[2], predBox[3], predBox[4]
+        print("P: ", xPred, yPred, wPred, hPred)
+        print("T: ", xTrue, yTrue, wTrue, hTrue)
 
             # Calculate box corners (xmin, ymin, xmax, ymax)
         # Convert center coordinates to corners
@@ -116,10 +122,10 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         union_area = true_area + pred_area - intersection_area
         
         # Log for debugging
-        print(f"True box corners: ({x1_min}, {y1_min}, {x1_max}, {y1_max})")
+        """print(f"True box corners: ({x1_min}, {y1_min}, {x1_max}, {y1_max})")
         print(f"Pred box corners: ({x2_min}, {y2_min}, {x2_max}, {y2_max})")
         print(f"Intersection dims: width={inter_width}, height={inter_height}")
-        print(f"Intersection area: {intersection_area}, Union area: {union_area}")
+        print(f"Intersection area: {intersection_area}, Union area: {union_area}")"""
         
         # Avoid division by zero
         if union_area == 0:
@@ -138,10 +144,10 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         TP = 0
         FP = 0
         FN = 0
-        precision = []
-        recall = []
-        print(np.array(TrainingInfoHandler.mapPredictions).shape)
-        print(np.array(TrainingInfoHandler.mapTruths).shape)
+        self.precision = []
+        self.recall = []
+        #print(np.array(TrainingInfoHandler.mapPredictions).shape)
+        #print(np.array(TrainingInfoHandler.mapTruths).shape)
         for a in range(len(TrainingInfoHandler.mapTruths)):
             for j in range(7):
                 for i in range(7):
@@ -150,29 +156,41 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
                     if predictionCell[0] < 0:
                         continue
                     IoU = self.calculateIoU(predictionCell, trueCell)
-                    print(trueCell[0], IoU)
-                    if IoU >= 0.1:#self.IoUThreshold:
-                        print(trueCell[0])
+                    #print(trueCell[0], IoU)
+                    if IoU >= 0.55:#self.IoUThreshold:
+                        #rint(trueCell[0])
                         if trueCell[0] == 1:
                             TP += 1
-                            print("TP")
+                            #print("TP")
                         else:
                             FP += 1
-                            print("FP")
+                            #print("FP")
                     else:
                         if trueCell[0] == 1:
                             FN += 1
-                            print("FN")
+                            #print("FN")
                     if TP + FP == 0:
-                        precision.append(0)
+                        self.precision.append(0)
                     else:
-                        precision.append(TP / (TP + FP))
+                        self.precision.append(TP / (TP + FP))
                     if TP + FN == 0:
-                        recall.append(0)
+                        self.recall.append(0)
                     else:
-                        recall.append(TP / (TP + FN))
-                    #print(recall)
-                    #print(precision)
+                        self.recall.append(TP / (TP + FN))
+        print(f"RECALL:\n{self.recall}")
+        print(f"PRECISION:\n{self.precision}")
+        self.recall = np.array(self.recall)
+        self.precision = np.array(self.precision)
+        sortedIndices = np.argsort(self.recall)
+        self.recall = self.recall[sortedIndices]
+        self.precision = self.precision[sortedIndices]
+        for i in range(len(self.precision)-2, -1, -1):  # Iterate from second-to-last element to the first
+            self.precision[i] = max(self.precision[i], self.precision[i + 1])
+        recallDelta = np.diff(self.recall, prepend=0)  # Difference in recall values
+        mAP = np.sum(self.precision * recallDelta)
+        return mAP
+
+
             
 class ModelTraining:
     def __init__(self, model, epochs, batchSize, learningRate, trainingDir, S, B, C, outputDir, guiInstance):
@@ -336,7 +354,8 @@ class mAPDataHandler:
         for step in inputBatch:
             
             #print(step.shape)
-            predictions.append(cls.model.predict(np.array(step).reshape((1,448,448,3)).astype("float32"))[0]) # / 255.0 after astype
+            x = np.array(step).reshape((1,448,448,3)).astype("float32") / 255.0
+            predictions.append(cls.model.predict(x)[0]) # / 255.0 after astype
         TrainingInfoHandler.mapPredictions = predictions
 
 def convertToArray(imagePath, size=(448,448)):
