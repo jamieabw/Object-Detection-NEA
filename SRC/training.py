@@ -6,7 +6,7 @@ import numpy as np
 import os
 from math import floor
 from model.loss import YoloLoss
-GPU = True
+GPU = False
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
     tf.config.experimental.set_memory_growth(physicalDevices[0], True)
@@ -45,21 +45,12 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
             self.bboxLoss = round(logs.get('boundingBoxLoss'), 3)
             self.setLossVals()
             self.updateEpochProgress(batch)
-            """if self.batchCounter > totalSteps - N:
-                #batchData = logs.get("batch_data")
-                #print(batchData)
-                images, labels = self.getBatch(batch)
-                for i in range(len(images)):
-                    self.predictionsForMAP.append(self.guiInstance.master.model.predict(images[i]))
-                    self.truthsForMAP.append(labels[i])"""
             self.batchCounter += 1
 
     def on_epoch_end(self, epoch, logs=None):
         self.batchCounter = 0
         self.currentEpoch += 1
         self.updateTrainingProgress()
-        #print(self.yoloLoss, self.bboxLoss)
-        #self.guiInstance.epochLossContainer.append((self.yoloLoss, self.confidenceLoss, self.classLoss, self.bboxLoss))
         mAPDataHandler.mAPBatchPredict()
         self.mAP = self.calculateMAP()
         self.guiInstance.epochLossContainer[0].append(self.yoloLoss)
@@ -85,69 +76,44 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.guiInstance.classLossLabel.config(text=f"Current Class Loss: {self.classLoss}")
         self.guiInstance.confidenceLossLabel.config(text=f"Current Confidence Loss: {self.confidenceLoss}")
         self.guiInstance.boundingBoxLossLabel.config(text=f"Current Bounding Box Loss: {self.bboxLoss}")
-
-    """def getBatch(self, batch):
-        print(self.params)
-        images, labels = self.params.get("train_data")
-        return images, labels"""
     
     def calculateIoU(self, predBox, trueBox):
         xTrue, yTrue, wTrue, hTrue = trueBox[1], trueBox[2], trueBox[3], trueBox[4] 
         xPred, yPred, wPred, hPred = predBox[1], predBox[2], predBox[3], predBox[4]
-        print("P: ", xPred, yPred, wPred, hPred)
-        print("T: ", xTrue, yTrue, wTrue, hTrue)
-
-            # Calculate box corners (xmin, ymin, xmax, ymax)
         # Convert center coordinates to corners
-        x1_min, y1_min = xTrue - wTrue / 2, yTrue - hTrue / 2
-        x1_max, y1_max = xTrue + wTrue / 2, yTrue + hTrue / 2
+        x1Min, y1Min = xTrue - wTrue / 2, yTrue - hTrue / 2
+        x1Max, y1Max = xTrue + wTrue / 2, yTrue + hTrue / 2
         
-        x2_min, y2_min = xPred - wPred / 2, yPred - hPred / 2
-        x2_max, y2_max = xPred + wPred / 2, yPred + hPred / 2
+        x2Min, y2Min = xPred - wPred / 2, yPred - hPred / 2
+        x2Max, y2Max = xPred + wPred / 2, yPred + hPred / 2
         
         # Calculate intersection coordinates
-        inter_xmin = max(x1_min, x2_min)
-        inter_ymin = max(y1_min, y2_min)
-        inter_xmax = min(x1_max, x2_max)
-        inter_ymax = min(y1_max, y2_max)
+        interXmin = max(x1Min, x2Min)
+        interYmin = max(y1Min, y2Min)
+        interXmax = min(x1Max, x2Max)
+        interYmax = min(y1Max, y2Max)
         
         # Calculate intersection area
-        inter_width = max(0, inter_xmax - inter_xmin)
-        inter_height = max(0, inter_ymax - inter_ymin)
-        intersection_area = inter_width * inter_height
+        interWidth = max(0, interXmax - interXmin)
+        interHeight = max(0, interYmax - interYmin)
+        intersectionArea = interWidth * interHeight
         
         # Calculate areas of the boxes
-        true_area = (x1_max - x1_min) * (y1_max - y1_min)
-        pred_area = (x2_max - x2_min) * (y2_max - y2_min)
-        union_area = true_area + pred_area - intersection_area
-        
-        # Log for debugging
-        """print(f"True box corners: ({x1_min}, {y1_min}, {x1_max}, {y1_max})")
-        print(f"Pred box corners: ({x2_min}, {y2_min}, {x2_max}, {y2_max})")
-        print(f"Intersection dims: width={inter_width}, height={inter_height}")
-        print(f"Intersection area: {intersection_area}, Union area: {union_area}")"""
-        
-        # Avoid division by zero
-        if union_area == 0:
+        trueArea = (x1Max - x1Min) * (y1Max - y1Min)
+        predArea = (x2Max - x2Min) * (y2Max - y2Min)
+        unionArea = trueArea + predArea - intersectionArea
+        if unionArea == 0:
             return 0.0
         
-        # Calculate IoU
-        iou = intersection_area / union_area
+        iou = intersectionArea / unionArea
         return iou
 
     def calculateMAP(self):
-        """
-        THIS IS WHAT I AM CURRENTLY WORKING ON.
-        TODO: everything works except from these values, they arent being generated properly, just a list of 0s
-        so will need to fix that and implement the final two graphs and everything is finished wheyy
-        """
-        TP = 0
-        FP = 0
-        FN = 0
+        truePositives = 0
+        falsePositives = 0
+        falseNegatives = 0
         self.precision = []
         self.recall = []
-        #print(np.array(TrainingInfoHandler.mapPredictions).shape)
-        #print(np.array(TrainingInfoHandler.mapTruths).shape)
         for a in range(len(TrainingInfoHandler.mapTruths)):
             for j in range(7):
                 for i in range(7):
@@ -156,37 +122,31 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
                     if predictionCell[0] < 0:
                         continue
                     IoU = self.calculateIoU(predictionCell, trueCell)
-                    #print(trueCell[0], IoU)
-                    if IoU >= 0.55:#self.IoUThreshold:
-                        #rint(trueCell[0])
+                    if IoU >= 0.55:
                         if trueCell[0] == 1:
-                            TP += 1
-                            #print("TP")
+                            truePositives += 1
                         else:
-                            FP += 1
-                            #print("FP")
+                            falsePositives += 1
                     else:
                         if trueCell[0] == 1:
-                            FN += 1
-                            #print("FN")
-                    if TP + FP == 0:
+                            falseNegatives += 1
+                    if truePositives + falsePositives == 0:
                         self.precision.append(0)
                     else:
-                        self.precision.append(TP / (TP + FP))
-                    if TP + FN == 0:
+                        self.precision.append(truePositives / (truePositives + falsePositives))
+                    if truePositives + falseNegatives == 0:
                         self.recall.append(0)
                     else:
-                        self.recall.append(TP / (TP + FN))
-        print(f"RECALL:\n{self.recall}")
-        print(f"PRECISION:\n{self.precision}")
+                        self.recall.append(truePositives / (truePositives + falseNegatives))
         self.recall = np.array(self.recall)
         self.precision = np.array(self.precision)
         sortedIndices = np.argsort(self.recall)
         self.recall = self.recall[sortedIndices]
         self.precision = self.precision[sortedIndices]
-        for i in range(len(self.precision)-2, -1, -1):  # Iterate from second-to-last element to the first
+        # Iterate from second-to-last element to the first
+        for i in range(len(self.precision)-2, -1, -1):
             self.precision[i] = max(self.precision[i], self.precision[i + 1])
-        recallDelta = np.diff(self.recall, prepend=0)  # Difference in recall values
+        recallDelta = np.diff(self.recall, prepend=0)
         mAP = np.sum(self.precision * recallDelta)
         return mAP
 
@@ -332,7 +292,7 @@ class ModelTraining:
 
     def train(self):
         self.model.build((None, 448,448,3))
-        self.model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") # REMOVE THIS URGENT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #self.model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") # REMOVE THIS URGENT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.model.fit(self.dataGenerator(),
                         epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                           callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])

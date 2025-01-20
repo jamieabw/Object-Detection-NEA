@@ -35,7 +35,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
-DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
+DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
 
 """
 TODO:
@@ -501,6 +501,7 @@ class ModelTrainer(tk.Toplevel):
                                      int(self.trainingGridSizeInput.get()), int(self.trainingBoundingBoxesInput.get()), int(self.trainingClassCountInput.get()), self.outputDir, self.currentInfoWindow)
         modelTrainingThread = threading.Thread(target=self.trainer.train) #
         modelTrainingThread.start()
+
 class TrainingInfo(tk.Toplevel):
     def __init__(self, master, totalEpochs):
         super().__init__(master)
@@ -508,7 +509,7 @@ class TrainingInfo(tk.Toplevel):
         self.mAPContainer = []
         self.precisionContainer = []
         self.recallContainer = []
-        self.totalEpochs = totalEpochs #1 # default
+        self.totalEpochs = totalEpochs
         self.loss, self.confidenceLoss, self.classLoss, self.boundingBoxLoss = None, None,  None, None
         self.lossLabel = tk.Label(self, text=f"Current Loss: N/A")
         self.classLossLabel = tk.Label(self, text=f"Current Class Loss: N/A")
