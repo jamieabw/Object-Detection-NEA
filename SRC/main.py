@@ -263,7 +263,7 @@ class GUI(tk.Tk):
 
 
 # draws the bounding boxes based on the models prediction
-def drawYoloBoxes(image, yoloPrediction, instance, classes="hawk tuah"):
+def drawYoloBoxes(image, yoloPrediction, instance, classes="Person"):
     """
     Draw bounding boxes on the image based on YOLOv1 predictions.
 
