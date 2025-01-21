@@ -18,12 +18,10 @@ class CNNBlock(layers.Layer):
         x = self.leakyRelus[0](x)
         x = self.poolingLayers[0](x)
         for j in range(1, len(self.convLayers)):
-            #print(f"layer {j + 1}")
             x = self.convLayers[j](x)
             x = self.batchNorm[j](x)
             x = self.leakyRelus[j](x)
             if j in POOLING_POSITIONS:
-                #print(f"pooling layer after layer {j + 1}")
                 index = POOLING_POSITIONS.index(j)
                 x = self.poolingLayers[index](x)
         return x

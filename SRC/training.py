@@ -11,15 +11,7 @@ if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
     tf.config.experimental.set_memory_growth(physicalDevices[0], True)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-"""
-this file will contain another class for another GUI which has the sole purpose of defining new models and training them, this GUI will have toplevels which display
-graphs of the various infomation of the training process aswell as displaying the values of the losses and the mAP during training
-"""
-
-""" need to figure out how to get the data :( )"""
 N = 10 # 
-
-
 
 class TrainingInfoHandler(tf.keras.callbacks.Callback):
     mapInputs = []
@@ -122,7 +114,7 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
                     if predictionCell[0] < 0:
                         continue
                     IoU = self.calculateIoU(predictionCell, trueCell)
-                    if IoU >= 0.55:
+                    if IoU >= self.IoUThreshold:
                         if trueCell[0] == 1:
                             truePositives += 1
                         else:
@@ -162,9 +154,6 @@ class ModelTraining:
         self.S = S
         self.B = B
         self.C = C
-        print(f"FUCKING USELESS B: {self.B}")
-        print(f"FUCKING USELESS C: {self.C}")
-        print(f"FUCKING USELESS S: {self.S}")
         self.outputDir = outputDir
         self.xTrain, self.yTrain = self.preprocessData()
         self.checkpoint = tf.keras.callbacks.ModelCheckpoint(
@@ -178,7 +167,6 @@ class ModelTraining:
         self.model.compile(optimizer=tf.keras.optimizers.SGD(learning_rate=self.learningRate, momentum=0.9), loss=loss, metrics=["accuracy", loss.boundingBoxLoss, loss.ClassLoss, loss.ConfidenceLoss])
         
     def encodeLabels(self,textFileDir):
-        # Create label array: [S, S, B * (5 + C)]
         label = np.zeros(shape=[self.S, self.S, (self.B * 5) + self.C])
         cellSize = 1 / self.S
         with open(textFileDir, "r") as t:
@@ -194,7 +182,6 @@ class ModelTraining:
                 bboxW = float(properties[3])  # Width
                 bboxH = float(properties[4])  # Height
                 
-                # Determine which cell the bounding box belongs to
                 cellX = floor(bboxX // cellSize)  # Cell row index
                 cellY = floor(bboxY // cellSize)  # Cell column index
                 if bboxX > 1 or bboxY > 1:
@@ -206,46 +193,35 @@ class ModelTraining:
                 relativeW = bboxW / cellSize
                 relativeH = bboxH / cellSize
                 
-                # Assign values for each bounding box (support multiple B)
                 for b in range(self.B):
-                    boxStart = (b * 5)  # Start index for this box in the label array
-                    
-                    # If the confidence is 0 (no bounding box assigned yet), assign this box
-                    #print(cell_x, cell_y, bbox_y)
+                    boxStart = (b * 5)
+
                     if label[cellX, cellY, boxStart] == 0:
-                        # Assign the confidence (objectness)
                         label[cellX, cellY, boxStart] = 1
                         
-                        # Encode the bounding box (x, y, w, h)
                         label[cellX, cellY, boxStart + 1] = relativeX
                         label[cellX, cellY, boxStart + 2] = relativeY
                         label[cellX, cellY, boxStart + 3] = relativeW
                         label[cellX, cellY, boxStart + 4] = relativeH
                         
-                        # One-hot encode the class (start from box_start + 5)
                         label[cellX, cellY, boxStart + 5 + classId] = 1
-                        
-                
+        # removal of nans which would break the loss
         return np.nan_to_num(label)
     
 
     def preprocessData(self, testData=False):
-        images =[] #np.array([])
-        labels =[] #np.array([])
+        images =[]
+        labels =[] 
         counter = 0
         for file in os.listdir(self.trainingDir):
             if "txt" in file:
                 labels.append(self.encodeLabels(f"{self.trainingDir}\\{file}"))
-                #np.append(labels, encodeLabels(f"{folderDir}\\{file}", 8,1,1))
             else:
                 counter +=1
                 if testData:
-                    ...#convertToArray(images.append(f"{folderDir}\\{file}"))
                     images.append(f"{self.trainingDir}\\{file}")
                 else:    
                     images.append(f"{self.trainingDir}\\{file}")
-                #np.append(images, jpg_to_resized_array(f"{folderDir}\\{file}")
-
         
         images = np.array(images)
         labels = np.array(labels)
@@ -255,8 +231,6 @@ class ModelTraining:
         if not testData:
             indices = np.arange(len(images))
             np.random.shuffle(indices)
-
-            # Apply the permutation to both arrays
             shuffledImages = images[indices]
             print(labels.shape)
             shuffledLabels = labels[indices, ...]
@@ -264,8 +238,6 @@ class ModelTraining:
 
     def dataGenerator(self):
         startVal = 0
-
-        # Convert imagePaths and labels to lists to allow shuffling
         imagePaths = list(self.xTrain)
         labels = list(self.yTrain)
 
@@ -292,7 +264,6 @@ class ModelTraining:
 
     def train(self):
         self.model.build((None, 448,448,3))
-        #self.model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5") # REMOVE THIS URGENT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.model.fit(self.dataGenerator(),
                         epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                           callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
@@ -309,13 +280,10 @@ class mAPDataHandler:
         inputBatch = np.array(TrainingInfoHandler.mapInputs)
         outputBatch = np.array(TrainingInfoHandler.mapTruths)
         predictions = []
-        #print(outputBatch.shape)
         print(inputBatch.shape)
         for step in inputBatch:
-            
-            #print(step.shape)
             x = np.array(step).reshape((1,448,448,3)).astype("float32") / 255.0
-            predictions.append(cls.model.predict(x)[0]) # / 255.0 after astype
+            predictions.append(cls.model.predict(x)[0])
         TrainingInfoHandler.mapPredictions = predictions
 
 def convertToArray(imagePath, size=(448,448)):

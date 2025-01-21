@@ -37,18 +37,7 @@ DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
 DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
 
-"""
-TODO:
-- add a function to calculate mAP
-- add a window which displays statistical info about the training process, include: losses, mAP, epoch number, maybe a preview window
-which displays the results of running the model on a unique not seen before image after each epoch
-- add the choice of a penalising l2 regulariser
-- add support to use different GPUs for training
-- add a debug menu (this could display, current FPS)
-- train a model to sufficiently and effectively make detections on multiple objects
-- ensure all functions are made by ME, ensure all AI generations and support from websites is eliminated
-- sufficiently comment the code so a third party programmers understands why specific implementations are how they are
-"""
+
 
 # a place holder function used when loading an ENTIRE MODEL AND NOT ONLY WEIGHTS
 # this is no longer applicable due to the use of subclassing in a model which 
@@ -108,21 +97,11 @@ class YoloV1(tf.keras.Model):
         x = layers.Flatten()(x)
         x = self.denseLayer(x)
         x = layers.LeakyReLU(alpha=0.1)(x)
-        #x = layers.Dropout(0.5)(x)
         x = self.outputDense(x)
         x =  layers.Reshape((self.gridSize, self.gridSize, (5 * self.bboxes) + self.classes))(x)
         return x
 
-"""model = YoloV1()
-model.build((None, 448,448,3))
-model.load_weights(DEFAULT_MODEL_PATH)"""
-"""#load_model("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v1.h5", custom_objects={"yoloLoss" : yoloLossPlaceholder, "yoloLoss" : yoloLossPlaceholder
-                                                                                          ,"boundingBoxLoss" : yoloLossPlaceholder,
-                                                                                          "ClassLoss" : yoloLossPlaceholder,
-       
-                                                                                          
-                                                                                                                                                                                                                                                                "ConfidenceLoss" : yoloLossPlaceholder})"""
-
+                                                  
 # class responsible for the GUI, inherits from tk.TK to allow tkinter to be utilised in OOP fashion
 class GUI(tk.Tk):
     def __init__(self):
@@ -189,6 +168,8 @@ class GUI(tk.Tk):
         self.config(menu=self.menuBar)
 
 
+
+    # checks if a window has already been opened, prevents duplicates
     def windowCheck(self, window):
         if window is not None and window.winfo_exists():
             messagebox.showerror(title="Window Already Open.", message="Window is already open. Please close before reopening.")
@@ -368,7 +349,6 @@ class Settings(tk.Toplevel):
         self.colourPicker.pack()
         self.webcamDropdownLabel = tk.Label(self, text="Webcam Device:")
         self.webcamDropdownLabel.pack()
-        # self.webcamDropdown either a label or a dropdown depending on connected devices
         try:
             self.webcamDropdown = tk.OptionMenu(self, self.webcamName, *self.webcamOptions)
             self.webcamDropdown.pack()
@@ -425,6 +405,7 @@ class ModelSettings(tk.Toplevel):
         self.loadWeightsButton.pack()
         self.modelLoadWarningLabel.pack()
 
+    # gets weights from user chosen directory, checks compatibility and applies if possible
     def loadWeights(self):
         self.master.model = None
         self.master.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
@@ -492,7 +473,7 @@ class ModelTrainer(tk.Toplevel):
         self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
     
         
-
+    # starts a separate thread for training to prevent the program from freezing during training
     def beginTraining(self):
         self.currentInfoWindow = TrainingInfo(self, int(self.epochsInput.get()))
         model = YoloV1(int(self.trainingGridSizeInput.get()), int(self.trainingClassCountInput.get()), int(self.trainingBoundingBoxesInput.get()))
@@ -502,6 +483,7 @@ class ModelTrainer(tk.Toplevel):
         modelTrainingThread = threading.Thread(target=self.trainer.train) #
         modelTrainingThread.start()
 
+# class responsible for returning training data to the statistics window
 class TrainingInfo(tk.Toplevel):
     def __init__(self, master, totalEpochs):
         super().__init__(master)
@@ -538,6 +520,7 @@ class TrainingInfo(tk.Toplevel):
         self.mAPGraphWidget = self.mAPGraphDisplay.get_tk_widget()
         self.mAPGraphWidget.grid(row=0,column=2)
     
+    # creates the 3 graphs on the opening of the window
     def createPlots(self):
         self.lossGraph, self.lossGraphAxis = plt.subplots()
         self.lossGraphAxis.set_title("Epoch-Loss Graph")
@@ -555,12 +538,13 @@ class TrainingInfo(tk.Toplevel):
         self.mAPGraphAxis.set_ylabel("mAP")
         self.mAPGraphAxis.legend()
 
+
+    # updates graphs with necessary data from training at the end of each epoch
     def updatePlots(self):
         loss, confidenceLoss, classLoss, bboxLoss = self.epochLossContainer[0],self.epochLossContainer[1],self.epochLossContainer[2],self.epochLossContainer[3]
         self.lossGraphAxis.clear()
         self.precisionRecallGraphAxis.clear()
         self.mAPGraphAxis.clear()
-        #self.lossGraphAxis.plot(range(len(loss)), loss, color="red", label="YOLO Loss")
         self.lossGraphAxis.plot(range(len(classLoss)), classLoss, color="blue", label="Class Loss")
         self.lossGraphAxis.plot(range(len(confidenceLoss)), confidenceLoss, color="green", label="Confidence Loss")
         self.lossGraphAxis.plot(range(len(bboxLoss)), bboxLoss, color="orange", label="Bounding Box Loss")
@@ -573,14 +557,8 @@ class TrainingInfo(tk.Toplevel):
         self.mAPGraphDisplay.draw()
         self.mAPGraphAxis.legend()
 
-    
-
-
-
 if __name__ == "__main__":
     webcamThreadHandler.getWebcamDevices()
     WEBCAM_DETECTION_THREAD.start()
     gui = GUI()
     gui.mainloop()
-# THIS WORKS FIGURE OUT WHY!!!!!!!!
-#TODO
