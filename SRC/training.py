@@ -107,8 +107,8 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.precision = []
         self.recall = []
         for a in range(len(TrainingInfoHandler.mapTruths)):
-            for j in range(7):
-                for i in range(7):
+            for j in range(mAPDataHandler.model.BBOXES): # change to 7 if this breaks it
+                for i in range(mAPDataHandler.model.BBOXES):
                     predictionCell = TrainingInfoHandler.mapPredictions[a][i][j]
                     trueCell = TrainingInfoHandler.mapTruths[a][i][j]
                     if predictionCell[0] < 0:
