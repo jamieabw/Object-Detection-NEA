@@ -5,7 +5,8 @@ import random
 import numpy as np
 import os
 from math import floor
-from model.loss import YoloLoss
+from model.loss import YoloLoss#
+from tkinter import messagebox
 GPU = False
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
@@ -107,8 +108,8 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.precision = []
         self.recall = []
         for a in range(len(TrainingInfoHandler.mapTruths)):
-            for j in range(mAPDataHandler.model.BBOXES): # change to 7 if this breaks it
-                for i in range(mAPDataHandler.model.BBOXES):
+            for j in range(mAPDataHandler.model.bboxes): # change to 7 if this breaks it
+                for i in range(mAPDataHandler.model.bboxes):
                     predictionCell = TrainingInfoHandler.mapPredictions[a][i][j]
                     trueCell = TrainingInfoHandler.mapTruths[a][i][j]
                     if predictionCell[0] < 0:
@@ -168,7 +169,11 @@ class ModelTraining:
         
     def encodeLabels(self,textFileDir):
         label = np.zeros(shape=[self.S, self.S, (self.B * 5) + self.C])
-        cellSize = 1 / self.S
+        try:
+            cellSize = 1 / self.S
+        except ZeroDivisionError:
+            messagebox.showerror(title="Incompatible Parameters", message="Please retry using a higher S value than 0.")
+
         with open(textFileDir, "r") as t:
             for line in t.readlines():
                 properties = line.split(" ")
@@ -264,9 +269,15 @@ class ModelTraining:
 
     def train(self):
         self.model.build((None, 448,448,3))
-        self.model.fit(self.dataGenerator(),
-                        epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
-                          callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
+        try:
+            self.model.fit(self.dataGenerator(),
+                            epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
+                            callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
+        except tf.errors.OpError:
+            messagebox.showerror(title="Training Error", message="Training Failed: The loss values reached infinity, try training again with a lower learning rate.")
+
+        except ZeroDivisionError:
+            messagebox.showerror(title="Incompatible Parameters", message="Please retry using a higher batching value than 0.")
         
 
 class mAPDataHandler:

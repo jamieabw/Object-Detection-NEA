@@ -408,9 +408,13 @@ class ModelSettings(tk.Toplevel):
     # gets weights from user chosen directory, checks compatibility and applies if possible
     def loadWeights(self):
         self.master.model = None
-        self.master.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
-        self.master.model.build((None,448,448,3))
-        self.master.classes = self.classesInput.get()
+        try:
+            self.master.model = YoloV1(int(self.gridSizeInput.get()), int(self.classCountInput.get()), int(self.boundingBoxesInput.get()))
+            self.master.model.build((None,448,448,3))
+            self.master.classes = self.classesInput.get()
+        except Exception:
+            messagebox.showerror(title="Error using parameters", message="Please use valid parameters before loading weights.")
+            return
         weights = filedialog.askopenfile(filetypes=[("Model Weights File","*.h5"), ("All Files", "*.*")])
         print(weights)
         try:
