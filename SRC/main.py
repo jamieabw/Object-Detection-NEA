@@ -37,13 +37,12 @@ DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
 DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
 
-
-
 # a place holder function used when loading an ENTIRE MODEL AND NOT ONLY WEIGHTS
 # this is no longer applicable due to the use of subclassing in a model which 
 # breaks loading an entire model
 def yoloLossPlaceholder():
     pass
+
 
 class webcamThreadHandler:
     webcams = {}
@@ -51,36 +50,31 @@ class webcamThreadHandler:
     @classmethod
     def getWebcamDevices(cls):
         result = subprocess.run(['wmic', 'path', 'Win32_PnPEntity', 'where', 'Caption like "%cam%"', 'get', 'Caption'], stdout=subprocess.PIPE)
-        output = result.stdout.decode('utf-8').strip().split("\n")[1:]  # Skip the header line
+        output = result.stdout.decode('utf-8').strip().split("\n")[1:]  # slice skips the header line
 
-        # Clean up the output and remove any empty lines
+        #clean up the output and remove any empty lines
         deviceNames = [line.strip() for line in output if line.strip()]
         
-            
-            # Loop through possible OpenCV sources (device IDs 0-9)
+            #loop through possible OpenCV sources (device IDs 0-9)
         if len(deviceNames) == 0:
             cls.webcams.clear()
         for idx, name in enumerate(deviceNames):
-                # Check if OpenCV can access the device
+                #Check if OpenCV can access the device
             cap = cv2.VideoCapture(idx)
-            
             if cap.isOpened():
                 cls.webcams.update({name : idx})
                 cap.release()
             else:
                 if name in list(cls.webcams.keys()):
                     del cls.webcams[name]
-                print(cls.webcams)
+                #print(cls.webcams) old debugging statement which displays available webcams per cycle
 
 def getWebcamDevicesThreadHandler():
     while True:
         webcamThreadHandler.getWebcamDevices()
-        time.sleep(1)
+        time.sleep(1) # interval in seconds of time between checks
 
 WEBCAM_DETECTION_THREAD = threading.Thread(target=getWebcamDevicesThreadHandler, daemon=True)
-
-
-
 
 class YoloV1(tf.keras.Model):
     def __init__(self, gridSize=GRID_SIZE, classes=CLASSES, bboxes=BBOXES):
@@ -100,7 +94,6 @@ class YoloV1(tf.keras.Model):
         x = self.outputDense(x)
         x =  layers.Reshape((self.gridSize, self.gridSize, (5 * self.bboxes) + self.classes))(x)
         return x
-
                                                   
 # class responsible for the GUI, inherits from tk.TK to allow tkinter to be utilised in OOP fashion
 class GUI(tk.Tk):
@@ -135,8 +128,6 @@ class GUI(tk.Tk):
         self.currentModelTrainer = None
         self.currentModelSettingsWindow = None
 
-
-
     # function used for toggle button's command, is called when the button is pressed
     def toggleDetection(self):
         if self.detecting is False:
@@ -154,7 +145,6 @@ class GUI(tk.Tk):
             self.displayCurrentFrame()
         return
 
-
     # function used to declutter the constructor, sets all the properties of the different menus
     def setupMenu(self):
         self.menuBar = tk.Menu(self)
@@ -166,8 +156,6 @@ class GUI(tk.Tk):
         self.menuBar.add_cascade(label="Settings", command=self.openSettings)
         self.menuBar.add_cascade(label="Train New Model", command=self.openModelTrainer)
         self.config(menu=self.menuBar)
-
-
 
     # checks if a window has already been opened, prevents duplicates
     def windowCheck(self, window):
@@ -199,7 +187,6 @@ class GUI(tk.Tk):
         self.frameGenerator = yieldNextFrame(videoDir=videoPath)
         self.displayFootage()
 
-
     # function used for starting webcam footage
     def startDisplayWebcamFootage(self):
         if len(webcamThreadHandler.webcams) == 0:
@@ -208,7 +195,6 @@ class GUI(tk.Tk):
         self.frameGenerator = None
         self.frameGenerator = yieldNextFrame(source=self.webcamSource)  # Initialize the generator for the webcam
         self.displayFootage()
-
 
     # function for all types of video footage including webcams, uses a generator to pass each frame
     # firstly through the model then draws the boxes onto the frame and displays it continuously
@@ -224,11 +210,11 @@ class GUI(tk.Tk):
                     print("No frame received")
             except StopIteration:
                 print("No more frames")
-                self.frameGenerator = None  # Reset generator on completion
+                self.frameGenerator = None  #feset generator on completion
             except Exception as e:
                 print(f"Error displaying frame: {e}")
 
-            # Schedule the next frame update
+            #schedule the next frame update
             self.after(self.updateInterval, self.displayFootage)
 
     # loads an image in when user is importing image
@@ -243,10 +229,7 @@ class GUI(tk.Tk):
             width = self.currentFrame.width
             height = self.currentFrame.height
 
-        self.displayCurrentFrame()
-
-        
-        
+        self.displayCurrentFrame()   
 
     # a universal function for images AND videos, draws the model prediction onto the frame
     # then displays the current frame by updating the image label to contain the frame
@@ -259,48 +242,21 @@ class GUI(tk.Tk):
         self.imageLabel.config(image=self.photo)
         self.imageLabel.pack()
 
-
-
-
 # draws the bounding boxes based on the models prediction
 def drawYoloBoxes(image, yoloPrediction, instance, classes="Person"):
-    """
-    Draw bounding boxes on the image based on YOLOv1 predictions.
-
-    Args:
-        image (PIL.Image): The original image.
-        yoloPrediction (numpy.array): The YOLOv1 prediction with shape (1, s, s, 5*b + num_classes).
-            Each grid cell contains `b` bounding boxes, each with [confidence, x_center, y_center, w, h],
-            and class probabilities following the bounding boxes.
-        instance (GUI object): Instance with model and settings for drawing bounding boxes.
-
-    Returns:
-        PIL.Image: The image with drawn bounding boxes.
-    """
-    # Get grid size and number of bounding boxes per grid cell
-    s = instance.model.gridSize  # grid size (e.g., 7x7)
-    b = instance.model.bboxes  # number of bounding boxes per grid cell (e.g., 2) 
+    s = instance.model.gridSize  
+    b = instance.model.bboxes  
     classes = classes.split(",")
     numOfClasses = len(classes)
-    
-    # Create a drawing context for the image
-    draw = ImageDraw.Draw(image)
-    
-    # Image dimensions
+    draw = ImageDraw.Draw(image)   
     imgWidth, imgHeight = image.size
-
-    # Grid cell size
     cellWidth = imgWidth / s
     cellHeight = imgHeight / s
-
     # YOLOv1 prediction output format: (1, s, s, 5*b + num_classes)
     output = yoloPrediction[0]
-
-    # Loop through each grid cell
-    for j in range(s):  # Iterate over the rows of grid cells
-        for i in range(s):  # Iterate over the columns of grid cells
-            for box in range(b):  # Iterate over each bounding box in the current grid cell
-                # Extract confidence and bounding box details for this box
+    for j in range(s):  
+        for i in range(s): 
+            for box in range(b):
                 confidence = output[i, j, box * 5]
                 print(confidence)
                 if confidence > instance.threshold:  # Draw only if confidence is above the threshold
@@ -316,15 +272,12 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="Person"):
                     y = (j * cellHeight) + (cellHeight * yCentre) - (h / 2)
                     x2 = x + w
                     y2 = y + h
-                    classProbs = output[i, j, 5 * b:]  # Access class probabilities after all bounding boxes
+                    classProbs = output[i, j, 5 * b:]
                     classIndex = classProbs.argmax()  # Get the index of the class with the highest probability
 
                     # Draw the bounding box
                     draw.rectangle([x, y, x2, y2], outline=instance.bboxColour, width=instance.bboxWidth)
-
-                    # Draw class label and confidence score (assuming a single class for simplicity)
                     draw.text([x2, y], text=f"{classes[classIndex]}: {confidence:.2f}", fill=instance.bboxColour)
-
     return image
 
 class Settings(tk.Toplevel):
@@ -352,7 +305,6 @@ class Settings(tk.Toplevel):
         try:
             self.webcamDropdown = tk.OptionMenu(self, self.webcamName, *self.webcamOptions)
             self.webcamDropdown.pack()
-            print("test")
         except Exception as exception:
             print(exception)
         if len(webcamThreadHandler.webcams) == 0:
@@ -363,12 +315,10 @@ class Settings(tk.Toplevel):
         self.applySettingsButton = tk.Button(self, text="Apply Settings", command=self.applySettings)
         self.applySettingsButton.pack()
 
-
     def changeColour(self):
         self.tempColour = colorchooser.askcolor(title="Choose Colour")[1]
         self.colourPicker.config(fg=self.tempColour)
         
-
     # function is used for the button in settings, it applies all settings
     def applySettings(self):
         self.master.threshold = self.thresholdSlider.get()
@@ -379,7 +329,6 @@ class Settings(tk.Toplevel):
         self.master.bboxWidth = self.widthSlider.get()
         if self.master.currentFrame is not None:
             self.master.displayCurrentFrame()
-
 
 class ModelSettings(tk.Toplevel):
     def __init__(self, master):
@@ -427,7 +376,6 @@ class ModelSettings(tk.Toplevel):
     
         self.destroy()
 
-
 class ModelTrainer(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
@@ -474,8 +422,7 @@ class ModelTrainer(tk.Toplevel):
             self.outputDir = filedialog.askdirectory(title="Select Training Annotations Folder:")
         except Exception:
             return
-        self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")
-    
+        self.outputButtonLabel.config(text=f"Currently Selected: {self.outputDir}")  
         
     # starts a separate thread for training to prevent the program from freezing during training
     def beginTraining(self):
@@ -541,7 +488,6 @@ class TrainingInfo(tk.Toplevel):
         self.mAPGraphAxis.set_xlabel("Epoch")
         self.mAPGraphAxis.set_ylabel("mAP")
         self.mAPGraphAxis.legend()
-
 
     # updates graphs with necessary data from training at the end of each epoch
     def updatePlots(self):
