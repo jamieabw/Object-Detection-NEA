@@ -6,6 +6,7 @@ import numpy as np
 # FIX THIS FIX THIS FIX THIS
 
 class YoloLoss:
+    epsilon = 1e-2
     def __init__(self, B=1):
         self.B = B
 
@@ -26,9 +27,7 @@ class YoloLoss:
         tf.debugging.assert_all_finite(confidenceLoss, 'NaNs or Infs found in c')
         
         # Add epsilon to avoid division by zero
-        nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32)
-        print(np.array(nonZeroCount))
-        #print(nonZeroCount)
+        nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32) + YoloLoss.epsilon
         return confidenceLoss / (nonZeroCount)
 
     def ClassLoss(self, yTrue, yPred):
@@ -36,7 +35,7 @@ class YoloLoss:
         classLoss = tf.reduce_sum(tf.square(existsObject * (yTrue[..., 5 * self.B:] - yPred[..., 5 * self.B:])))
         
         # Add epsilon to avoid division by zero
-        nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32) + 1e-10
+        nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32) + YoloLoss.epsilon
         return classLoss / (nonZeroCount)
 
     def boundingBoxLoss(self, yTrue, yPred):
@@ -59,5 +58,5 @@ class YoloLoss:
         tf.debugging.assert_all_finite(whLoss, 'NaNs or Infs found in wh')
         tf.debugging.assert_all_finite(xyLoss, f'NaNs or Infs found in xy {xyLoss}')
         tf.debugging.assert_all_finite(xyLoss, 'NaNs or Infs found in xy')        
-        nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32) + 1e-10
+        nonZeroCount = tf.cast(tf.math.count_nonzero(existsObject), dtype=tf.float32) + YoloLoss.epsilon
         return (xyLoss + whLoss) / (nonZeroCount)

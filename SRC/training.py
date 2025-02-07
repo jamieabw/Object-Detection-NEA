@@ -7,7 +7,7 @@ import os
 from math import floor
 from model.loss import YoloLoss#
 from tkinter import messagebox
-GPU = False
+GPU = True
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
     tf.config.experimental.set_memory_growth(physicalDevices[0], True)
@@ -26,7 +26,7 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.classLoss = None
         self.confidenceLoss = None
         self.guiInstance = guiInstance
-        self.IoUThreshold = 0.5
+        self.IoUThreshold = 0.6
 
     def on_batch_end(self, batch, logs=None):
         if logs is not None:
@@ -72,7 +72,10 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.guiInstance.boundingBoxLossLabel.config(text=f"Current Bounding Box Loss: {self.bboxLoss}")
     
     def calculateIoU(self, predBox, trueBox):
-        xTrue, yTrue, wTrue, hTrue = trueBox[1], trueBox[2], trueBox[3], trueBox[4] 
+        if np.all(trueBox ==0):
+            return 0
+
+        xTrue, yTrue, wTrue, hTrue = trueBox[1], trueBox[2], trueBox[3], trueBox[4]
         xPred, yPred, wPred, hPred = predBox[1], predBox[2], predBox[3], predBox[4]
         #center coordinates to corners
         x1Min, y1Min = xTrue - wTrue / 2, yTrue - hTrue / 2
@@ -104,30 +107,31 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         falseNegatives = 0
         self.precision = []
         self.recall = []
-        for a in range(len(TrainingInfoHandler.mapTruths)):
-            for j in range(mAPDataHandler.model.bboxes): # change to 7 if this breaks it
-                for i in range(mAPDataHandler.model.bboxes):
-                    predictionCell = TrainingInfoHandler.mapPredictions[a][i][j]
-                    trueCell = TrainingInfoHandler.mapTruths[a][i][j]
-                    if predictionCell[0] < 0:
-                        continue
-                    IoU = self.calculateIoU(predictionCell, trueCell)
-                    if IoU >= self.IoUThreshold:
-                        if trueCell[0] == 1:
-                            truePositives += 1
+        for idx, batch in enumerate(TrainingInfoHandler.mapTruths):
+            for a in range(len(batch)):
+                for j in range(mAPDataHandler.model.gridSize): # change to 7 if this breaks it
+                    for i in range(mAPDataHandler.model.gridSize):
+                        predictionCell = TrainingInfoHandler.mapPredictions[a + (idx * len(batch))][i][j]
+                        trueCell = batch[a][i][j]
+                        IoU = self.calculateIoU(predictionCell, trueCell)
+                        if IoU >= self.IoUThreshold:
+                            if trueCell[0] == 1:
+                                truePositives += 1
                         else:
-                            falsePositives += 1
-                    else:
-                        if trueCell[0] == 1:
-                            falseNegatives += 1
-                    if truePositives + falsePositives == 0:
-                        self.precision.append(0)
-                    else:
-                        self.precision.append(truePositives / (truePositives + falsePositives))
-                    if truePositives + falseNegatives == 0:
-                        self.recall.append(0)
-                    else:
-                        self.recall.append(truePositives / (truePositives + falseNegatives))
+                            if trueCell[0] == 1:
+                                falseNegatives += 1
+                        if trueCell[0] == 0 and predictionCell[0] > 0.5:
+                                falsePositives += 1
+                        if truePositives + falsePositives == 0:
+                            self.precision.append(0)
+                        else:
+                            self.precision.append(truePositives / (truePositives + falsePositives))
+                        if truePositives + falseNegatives == 0:
+                            self.recall.append(0)
+                        else:
+                            self.recall.append(truePositives / (truePositives + falseNegatives))
+        print(f"recall: {self.recall}")
+        print(f"precision: {self.precision}")
         # organising precision and recall values
         self.recall = np.array(self.recall)
         self.precision = np.array(self.precision)
@@ -222,14 +226,12 @@ class ModelTraining:
         
         images = np.array(images)
         labels = np.array(labels)
-        print(labels.shape)
         # test data cannot be shuffled here, as some test data will not have a corresponding annotation
         # therefore elements would be mismatched in both arrays leading to problems when testing the model
         if not testData:
             indices = np.arange(len(images))
             np.random.shuffle(indices)
             shuffledImages = images[indices]
-            print(labels.shape)
             shuffledLabels = labels[indices, ...]
             return shuffledImages, shuffledLabels
 
@@ -240,6 +242,8 @@ class ModelTraining:
 
         while True:
             if startVal == 0:  # Shuffle at the start of each epoch
+                mapBatchesInput = []
+                mapBatchesOutput = []
                 combined = list(zip(imagePaths, labels))
                 random.shuffle(combined)
                 imagePaths, labels = zip(*combined)
@@ -253,8 +257,11 @@ class ModelTraining:
             startVal += self.batchSize
             if startVal >= len(labels):
                 startVal = 0
-            if endVal == len(labels):
-                    mAPDataHandler.gatherMapData(batchInput, batchOutput)
+            if endVal >= len(labels) - (3 * self.batchSize) :
+                mapBatchesInput.append(batchInput)
+                mapBatchesOutput.append(batchOutput)
+            if endVal >= len(labels):
+                    mAPDataHandler.gatherMapData(mapBatchesInput, mapBatchesOutput)
                     mAPDataHandler.model = self.model
             yield (np.array(batchInput).astype("float32") / 255.0, np.array(batchOutput))
 
@@ -269,6 +276,8 @@ class ModelTraining:
 
         except ZeroDivisionError:
             messagebox.showerror(title="Incompatible Parameters", message="Please retry using a higher batching value than 0.")
+        except tf.errors.ResourceExhaustedError:
+            messagebox.showerror(title="Failed to allocate memory.", message="Failed to allocate enough memory to train, use a lower batching amount or smaller dataset./")
         
 
 class mAPDataHandler:
@@ -282,10 +291,11 @@ class mAPDataHandler:
         inputBatch = np.array(TrainingInfoHandler.mapInputs)
         outputBatch = np.array(TrainingInfoHandler.mapTruths)
         predictions = []
-        for step in inputBatch:
-            x = np.array(step).reshape((1,448,448,3)).astype("float32") / 255.0
-            predictions.append(cls.model.predict(x)[0])
-        TrainingInfoHandler.mapPredictions = predictions
+        for batch in inputBatch:
+            for step in batch:
+                x = np.array(step).reshape((1,448,448,3)).astype("float32") / 255.0
+                predictions.append(cls.model.predict(x)[0])
+            TrainingInfoHandler.mapPredictions = predictions
 
 def convertToArray(imagePath, size=(448,448)):
     image = Image.open(imagePath)

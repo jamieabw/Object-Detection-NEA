@@ -35,7 +35,7 @@ l2Regularizer = keras.regularizers.l2(0)
 DEFAULT_CAM_SOURCE = 0
 DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
-DEFAULT_MODEL_PATH = "C:\\Users\\jamie\\Desktop\\saVES\\YOLOV1_v5.h5"
+DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
 
 # a place holder function used when loading an ENTIRE MODEL AND NOT ONLY WEIGHTS
 # this is no longer applicable due to the use of subclassing in a model which 
@@ -130,9 +130,13 @@ class GUI(tk.Tk):
 
     # function used for toggle button's command, is called when the button is pressed
     def toggleDetection(self):
+        print(self.classes)
         if self.detecting is False:
             if self.model == None:
                 messagebox.showerror(title="Model Error", message="No model is currently loaded. Please load a model.")
+                return
+            if self.currentModelSettingsWindow is not None and self.currentModelSettingsWindow.winfo_exists():
+                messagebox.showwarning(title="Model Settings currently open", message="While model settings are open, you cannot activate detections.")
                 return
             self.detecting = True
             self.toggleLabel.config(text="Detection: Active", fg="green")
@@ -500,6 +504,10 @@ class TrainingInfo(tk.Toplevel):
         self.lossGraphAxis.plot(range(len(bboxLoss)), bboxLoss, color="orange", label="Bounding Box Loss")
         self.lossGraphAxis.legend()
         self.lossGraphDisplay.draw()
+        sortedPR = sorted(zip(self.precisionContainer, self.recallContainer), key=lambda x: x[0])  #sort by precision
+        self.precisionContainer, self.recallContainer = zip(*sortedPR)
+        self.precisionContainer = list(self.precisionContainer)
+        self.recallContainer = list(self.recallContainer)
         self.precisionRecallGraphAxis.plot(self.precisionContainer, self.recallContainer)
         self.precisionRecallGraphDisplay.draw()
         self.precisionRecallGraphAxis.legend()
