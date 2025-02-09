@@ -22,6 +22,8 @@ import traceback
 from training import ModelTraining
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from numba import cuda
+import gc
 WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 800
 DEFAULT_THRESHOLD = 0.4
@@ -105,7 +107,7 @@ class GUI(tk.Tk):
         self.imageLabel.pack()
         self.model = YoloV1()
         self.model.build((None, 448,448,3))
-        self.model.load_weights(DEFAULT_MODEL_PATH)
+        self.model.load_weights(DEFAULT_MODEL_PATH) 
         self.detecting = False
         self.threshold = DEFAULT_THRESHOLD # if confidence > threshold then detection will display
         self.detectToggleButton = tk.Button(self, text="Toggle Detections", command=self.toggleDetection)
@@ -183,13 +185,20 @@ class GUI(tk.Tk):
     # function used for when importing a video
     def startDisplayVideo(self):
         self.frameGenerator = None
-        videoPath = filedialog.askopenfilename(title="Select a Video File", filetypes=[("Video files", "*.MP4"),
-                                                                                        ("Video files", "*.MKV"),
-                                                                                          ("Video files", "*.MOV"),
-                                                                                            ("Video files", "*.WEBM"),
-                                                                                              ("All Files", "*.*")])
-        self.frameGenerator = yieldNextFrame(videoDir=videoPath)
-        self.displayFootage()
+        tf.keras.backend.clear_session()
+
+        
+        try:
+            videoPath = filedialog.askopenfilename(title="Select a Video File", filetypes=[("Video files", "*.MP4"),
+                                                                                            ("Video files", "*.MKV"),
+                                                                                            ("Video files", "*.MOV"),
+                                                                                                ("Video files", "*.WEBM"),
+                                                                                                ("All Files", "*.*")])
+            self.frameGenerator = yieldNextFrame(videoDir=videoPath)
+            self.displayFootage()
+        except Exception:
+            messagebox.showerror(title="Video Import Error", message="The selected video is corrupted or unreadable, please try again.")
+
 
     # function used for starting webcam footage
     def startDisplayWebcamFootage(self):
@@ -197,6 +206,7 @@ class GUI(tk.Tk):
             messagebox.showerror(title="Webcam Device Error", message="No webcam devices have been detected, please try again.")
             return
         self.frameGenerator = None
+        tf.keras.backend.clear_session()
         self.frameGenerator = yieldNextFrame(source=self.webcamSource)  # Initialize the generator for the webcam
         self.displayFootage()
 
@@ -225,7 +235,12 @@ class GUI(tk.Tk):
 
     def displayImage(self):
         self.frameGenerator = None
-        self.currentFrame = readImage(filedialog.askopenfilename(title="Select an Image File", filetypes=[("Image files", "*.JPG"), ("All Files", "*.*")]))
+        try:
+            self.currentFrame = readImage(filedialog.askopenfilename(title="Select an Image File", filetypes=[("Image files", "*.JPG"), ("All Files", "*.*")]))
+        except Exception:
+            messagebox.showerror(title="Image Import Error", message="The selected image is corrupted or unreadable, please try again.")
+            return
+
         width = self.currentFrame.width
         height = self.currentFrame.height
         while width > WINDOW_WIDTH or height > WINDOW_HEIGHT:
@@ -239,9 +254,17 @@ class GUI(tk.Tk):
     # then displays the current frame by updating the image label to contain the frame
     def displayCurrentFrame(self):
         frame = self.currentFrame.copy()
+        width, height = self.currentFrame.width, self.currentFrame.height
+        while width > WINDOW_WIDTH or height > WINDOW_HEIGHT:
+            frame = frame.resize((width // 2, height // 2))
+            width = frame.width
+            height = frame.height
         if self.detecting:
+            print(1111111111111111111111111111111111111111111111111)
             self.modelInputImage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
+            print(211111111121222222211111111)
             frame = drawYoloBoxes(frame, self.model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self, self.classes)
+            print(33333333333333333333333333)
         self.photo = ImageTk.PhotoImage(frame)
         self.imageLabel.config(image=self.photo)
         self.imageLabel.pack()

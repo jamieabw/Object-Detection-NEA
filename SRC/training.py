@@ -7,6 +7,7 @@ import os
 from math import floor
 from model.loss import YoloLoss#
 from tkinter import messagebox
+from numba import cuda
 GPU = True
 if GPU:
     physicalDevices = tf.config.list_physical_devices("GPU")
@@ -42,7 +43,6 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         self.batchCounter = 0
         self.currentEpoch += 1
-        self.updateTrainingProgress()
         mAPDataHandler.mAPBatchPredict()
         self.mAP = self.calculateMAP()
         self.guiInstance.epochLossContainer[0].append(self.yoloLoss)
@@ -54,6 +54,7 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
             self.guiInstance.recallContainer.append(self.recall[i])
             self.guiInstance.precisionContainer.append(self.precision[i])
         self.guiInstance.updatePlots()
+        self.updateTrainingProgress()
 
 
     def updateEpochProgress(self, currentStep):
@@ -64,6 +65,9 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.guiInstance.trainingProgressBar["value"] = (self.currentEpoch / self.guiInstance.totalEpochs) * 100
         if self.guiInstance.trainingProgressBar["value"] >= 100:
             messagebox.showinfo(title="Training Finished", message="Training has successfully completed. You may now close this window.")
+            tf.keras.backend.clear_session()
+            cuda.select_device(0)
+            cuda.close()
 
     def setLossVals(self):
         self.guiInstance.lossLabel.config(text=f"Current Overall Weighted Loss: {self.yoloLoss}")
@@ -266,18 +270,29 @@ class ModelTraining:
             yield (np.array(batchInput).astype("float32") / 255.0, np.array(batchOutput))
 
     def train(self):
-        self.model.build((None, 448,448,3))
         try:
+            self.model.build((None, 448,448,3))
+            #self.model.load_weights("E:\\.Trash-1000\\modelSave_epoch_08.h5")
             self.model.fit(self.dataGenerator(),
                             epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                             callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
         except tf.errors.OpError:
             messagebox.showerror(title="Training Error", message="Training Failed: The loss values reached infinity, try training again with a lower learning rate or more appropriate dataset.")
+            tf.keras.backend.clear_session()
+            cuda.select_device(0)
+            cuda.close()
 
         except ZeroDivisionError:
             messagebox.showerror(title="Incompatible Parameters", message="Please retry using a higher batching value than 0.")
+            tf.keras.backend.clear_session()
+            cuda.select_device(0)
+            cuda.close()
+
         except tf.errors.ResourceExhaustedError:
             messagebox.showerror(title="Failed to allocate memory.", message="Failed to allocate enough memory to train, use a lower batching amount or smaller dataset./")
+            tf.keras.backend.clear_session()
+            cuda.select_device(0)
+            cuda.close()
         
 
 class mAPDataHandler:
