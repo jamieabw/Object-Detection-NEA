@@ -289,12 +289,12 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="Person"):
                 if confidence > instance.threshold:  # Draw only if confidence is above the threshold
                     xCentre = output[i, j, box * 5 + 1]
                     yCentre = output[i, j, box * 5 + 2]
-                    box_w = output[i, j, box * 5 + 3]
-                    box_h = output[i, j, box * 5 + 4]
+                    boxW = output[i, j, box * 5 + 3]
+                    boxH = output[i, j, box * 5 + 4]
 
                     # Convert normalized bounding box coordinates to image coordinates
-                    w = cellWidth * box_w
-                    h = cellHeight * box_h
+                    w = cellWidth * boxW
+                    h = cellHeight * boxH
                     x = (i * cellWidth) + (cellWidth * xCentre) - (w / 2)
                     y = (j * cellHeight) + (cellHeight * yCentre) - (h / 2)
                     x2 = x + w
