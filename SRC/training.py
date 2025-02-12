@@ -241,7 +241,7 @@ class ModelTraining:
         labels = list(self.yTrain)
 
         while True:
-            if startVal == 0:  # Shuffle at the start of each epoch
+            if startVal == 0:  #shuffle at the start of each epoch
                 mapBatchesInput = []
                 mapBatchesOutput = []
                 combined = list(zip(imagePaths, labels))
