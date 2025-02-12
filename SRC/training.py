@@ -20,7 +20,6 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
     mapTruths = []
     def __init__(self, guiInstance):
         super().__init__()
-        self.batchCounter = 0
         self.currentEpoch = 0
         self.yoloLoss = None
         self.bboxLoss = None
@@ -38,10 +37,8 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
             self.bboxLoss = round(logs.get('boundingBoxLoss'), 3)
             self.setLossVals()
             self.updateEpochProgress(batch)
-            self.batchCounter += 1
 
     def on_epoch_end(self, epoch, logs=None):
-        self.batchCounter = 0
         self.currentEpoch += 1
         mAPDataHandler.mAPBatchPredict()
         self.mAP = self.calculateMAP()
@@ -134,8 +131,7 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
                             self.recall.append(0)
                         else:
                             self.recall.append(truePositives / (truePositives + falseNegatives))
-        print(f"recall: {self.recall}")
-        print(f"precision: {self.precision}")
+
         # organising precision and recall values
         self.recall = np.array(self.recall)
         self.precision = np.array(self.precision)
@@ -272,24 +268,24 @@ class ModelTraining:
     def train(self):
         try:
             self.model.build((None, 448,448,3))
-            #self.model.load_weights("E:\\.Trash-1000\\modelSave_epoch_08.h5")
             self.model.fit(self.dataGenerator(),
                             epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                             callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])
         except tf.errors.OpError:
             messagebox.showerror(title="Training Error", message="Training Failed: The loss values reached infinity, try training again with a lower learning rate or more appropriate dataset.")
-            tf.keras.backend.clear_session()
-            cuda.select_device(0)
-            cuda.close()
+            
+            
 
         except ZeroDivisionError:
             messagebox.showerror(title="Incompatible Parameters", message="Please retry using a higher batching value than 0.")
-            tf.keras.backend.clear_session()
-            cuda.select_device(0)
-            cuda.close()
+            
+            
 
         except tf.errors.ResourceExhaustedError:
-            messagebox.showerror(title="Failed to allocate memory.", message="Failed to allocate enough memory to train, use a lower batching amount or smaller dataset./")
+            messagebox.showerror(title="Failed to allocate memory.", message="Failed to allocate enough memory to train, use a lower batching amount or smaller dataset.")
+            
+            
+        finally:
             tf.keras.backend.clear_session()
             cuda.select_device(0)
             cuda.close()

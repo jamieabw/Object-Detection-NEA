@@ -69,7 +69,6 @@ class webcamThreadHandler:
             else:
                 if name in list(cls.webcams.keys()):
                     del cls.webcams[name]
-                #print(cls.webcams) old debugging statement which displays available webcams per cycle
 
 def getWebcamDevicesThreadHandler():
     while True:
@@ -260,11 +259,8 @@ class GUI(tk.Tk):
             width = frame.width
             height = frame.height
         if self.detecting:
-            print(1111111111111111111111111111111111111111111111111)
             self.modelInputImage = (np.array(frame.resize((448,448))))[...,:3].reshape((1,448,448,3)).astype("float32") / 255.0
-            print(211111111121222222211111111)
             frame = drawYoloBoxes(frame, self.model.predict(np.transpose(self.modelInputImage, (0, 2, 1, 3))), self, self.classes)
-            print(33333333333333333333333333)
         self.photo = ImageTk.PhotoImage(frame)
         self.imageLabel.config(image=self.photo)
         self.imageLabel.pack()
