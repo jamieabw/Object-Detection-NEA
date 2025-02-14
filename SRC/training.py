@@ -5,7 +5,7 @@ import random
 import numpy as np
 import os
 from math import floor
-from model.loss import YoloLoss#
+from model.loss import YoloLoss
 from tkinter import messagebox
 from numba import cuda
 GPU = True
@@ -110,7 +110,7 @@ class TrainingInfoHandler(tf.keras.callbacks.Callback):
         self.recall = []
         for idx, batch in enumerate(TrainingInfoHandler.mapTruths):
             for a in range(len(batch)):
-                for j in range(mAPDataHandler.model.gridSize): # change to 7 if this breaks it
+                for j in range(mAPDataHandler.model.gridSize):
                     for i in range(mAPDataHandler.model.gridSize):
                         predictionCell = TrainingInfoHandler.mapPredictions[a + (idx * len(batch))][i][j]
                         trueCell = batch[a][i][j]
@@ -157,7 +157,7 @@ class ModelTraining:
         self.outputDir = outputDir
         self.xTrain, self.yTrain = self.preprocessData()
         self.checkpoint = tf.keras.callbacks.ModelCheckpoint(
-    filepath= f"{self.outputDir}" + '\\modelSave_epoch_{epoch:02d}.h5',  # Use the built-in epoch variable
+    filepath= f"{self.outputDir}" + '\\modelSave_epoch_{epoch:02d}.h5',
     save_weights_only=True,
     save_freq="epoch",
     verbose=1
@@ -268,6 +268,7 @@ class ModelTraining:
     def train(self):
         try:
             self.model.build((None, 448,448,3))
+            self.model.load_weights("E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5")
             self.model.fit(self.dataGenerator(),
                             epochs=self.epochs, verbose=1, steps_per_epoch=len(self.yTrain) /self.batchSize,
                             callbacks=[self.checkpoint, TrainingInfoHandler(self.guiInstance)])

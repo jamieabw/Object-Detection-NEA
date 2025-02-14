@@ -12,7 +12,6 @@ from keras.models import load_model
 from keras import layers
 import numpy as np
 from model.CNNblocks import CNNBlock
-#from model.model import YoloV1# this wont work for some reason, something to do with CNNBlocks
 import keras
 import subprocess
 import cv2
@@ -39,13 +38,6 @@ DEFAULT_BBOX_COLOUR = "#FF0000"
 DEFAULT_BBOX_WIDTH = 2
 DEFAULT_MODEL_PATH = "E:\\IMPORTANT MODEL SAVES FOR NEA\\YOLOV1_v5.h5"
 
-# a place holder function used when loading an ENTIRE MODEL AND NOT ONLY WEIGHTS
-# this is no longer applicable due to the use of subclassing in a model which 
-# breaks loading an entire model
-def yoloLossPlaceholder():
-    pass
-
-
 class webcamThreadHandler:
     webcams = {}
 
@@ -61,7 +53,7 @@ class webcamThreadHandler:
         if len(deviceNames) == 0:
             cls.webcams.clear()
         for idx, name in enumerate(deviceNames):
-                #Check if OpenCV can access the device
+                #check if OpenCV can access the device
             cap = cv2.VideoCapture(idx)
             if cap.isOpened():
                 cls.webcams.update({name : idx})
@@ -214,7 +206,7 @@ class GUI(tk.Tk):
     def displayFootage(self):
         if self.frameGenerator is not None:
             try:
-                # Get the next frame from the generator
+                # get the next frame from the generator
                 self.currentFrame = next(self.frameGenerator)
                 
                 if self.currentFrame:
@@ -275,20 +267,19 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="Person"):
     imgWidth, imgHeight = image.size
     cellWidth = imgWidth / s
     cellHeight = imgHeight / s
-    # YOLOv1 prediction output format: (1, s, s, 5*b + num_classes)
     output = yoloPrediction[0]
     for j in range(s):  
         for i in range(s): 
             for box in range(b):
                 confidence = output[i, j, box * 5]
                 print(confidence)
-                if confidence > instance.threshold:  # Draw only if confidence is above the threshold
+                if confidence > instance.threshold:
                     xCentre = output[i, j, box * 5 + 1]
                     yCentre = output[i, j, box * 5 + 2]
                     boxW = output[i, j, box * 5 + 3]
                     boxH = output[i, j, box * 5 + 4]
 
-                    # Convert normalized bounding box coordinates to image coordinates
+                    #convert normalized bounding box coordinates to image coordinates
                     w = cellWidth * boxW
                     h = cellHeight * boxH
                     x = (i * cellWidth) + (cellWidth * xCentre) - (w / 2)
@@ -296,9 +287,7 @@ def drawYoloBoxes(image, yoloPrediction, instance, classes="Person"):
                     x2 = x + w
                     y2 = y + h
                     classProbs = output[i, j, 5 * b:]
-                    classIndex = classProbs.argmax()  # Get the index of the class with the highest probability
-
-                    # Draw the bounding box
+                    classIndex = classProbs.argmax() 
                     draw.rectangle([x, y, x2, y2], outline=instance.bboxColour, width=instance.bboxWidth)
                     draw.text([x2, y], text=f"{classes[classIndex]}: {confidence:.2f}", fill=instance.bboxColour)
     return image
